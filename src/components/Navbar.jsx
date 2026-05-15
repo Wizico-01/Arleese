@@ -9,28 +9,40 @@ export default function Navbar({ user, setPage, logout, page }) {
       position: "sticky",
       top: 0,
       zIndex: 300,
-      boxShadow: "0 1px 6px rgba(0,0,0,.05)",
+      boxShadow: "0 1px 6px rgba(26, 20, 20, 0.05)",
     }}>
       <div style={{
         maxWidth: 1200,
         margin: "0 auto",
-        padding: "0 24px",
-        height: 64,
+        // ✅ FIX 1: Reduced horizontal padding on mobile
+        padding: "0 12px",
+        height: 56, // slightly shorter on mobile
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
+        width: "100%",
+        boxSizing: "border-box", // ✅ FIX 2: prevent overflow
       }}>
 
         {/* LOGO */}
         <button
           onClick={() => setPage('home')}
-          style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
+          style={{
+            background: "none", border: "none",
+            cursor: "pointer", padding: 0,
+            flexShrink: 0, // ✅ FIX 3: logo never shrinks
+          }}
         >
           <Logo />
         </button>
 
         {/* NAV LINKS */}
-        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 2, // ✅ FIX 4: tighter gap on mobile
+          flexShrink: 0,
+        }}>
           <button
             onClick={() => setPage('browse')}
             style={{
@@ -39,9 +51,10 @@ export default function Navbar({ user, setPage, logout, page }) {
               fontWeight: page === 'browse' ? 700 : 500,
               border: "none",
               borderRadius: 8,
-              padding: "7px 14px",
-              fontSize: "0.87rem",
+              padding: "7px 10px", // ✅ FIX 5: less padding
+              fontSize: "0.82rem", // ✅ FIX 6: slightly smaller text
               cursor: "pointer",
+              whiteSpace: "nowrap",
             }}
           >
             Browse
@@ -56,25 +69,26 @@ export default function Navbar({ user, setPage, logout, page }) {
                 fontWeight: page === 'dashboard' ? 700 : 500,
                 border: "none",
                 borderRadius: 8,
-                padding: "7px 14px",
-                fontSize: "0.87rem",
+                padding: "7px 10px",
+                fontSize: "0.82rem",
                 cursor: "pointer",
+                whiteSpace: "nowrap",
               }}
             >
               Dashboard
             </button>
           )}
 
-          {/* NOT LOGGED IN */}
           {!user ? (
-            <div style={{ display: "flex", gap: 8, marginLeft: 8 }}>
+            <div style={{ display: "flex", gap: 4, marginLeft: 4 }}>
               <button
                 onClick={() => setPage('login')}
                 style={{
                   background: "none", border: "none",
-                  color: "#0d1b5e", padding: "7px 14px",
+                  color: "#0d1b5e", padding: "7px 10px",
                   borderRadius: 8, cursor: "pointer",
-                  fontSize: "0.87rem", fontWeight: 500,
+                  fontSize: "0.82rem", fontWeight: 500,
+                  whiteSpace: "nowrap",
                 }}
               >
                 Login
@@ -84,21 +98,24 @@ export default function Navbar({ user, setPage, logout, page }) {
                 style={{
                   background: "#0d1b5e", color: "#fff",
                   border: "none", borderRadius: 8,
-                  padding: "8px 18px", cursor: "pointer",
-                  fontSize: "0.87rem", fontWeight: 600,
+                  // ✅ FIX 7: reduced padding so button fits on screen
+                  padding: "8px 12px",
+                  cursor: "pointer",
+                  fontSize: "0.82rem", fontWeight: 600,
+                  whiteSpace: "nowrap",
                 }}
               >
                 Sign Up Free
               </button>
             </div>
           ) : (
-            /* LOGGED IN */
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginLeft: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: 8 }}>
               <div style={{
-                width: 34, height: 34, borderRadius: "50%",
+                width: 32, height: 32, borderRadius: "50%",
                 background: "#0d1b5e", color: "#fff",
                 display: "flex", alignItems: "center",
-                justifyContent: "center", fontWeight: 700, fontSize: "0.88rem",
+                justifyContent: "center", fontWeight: 700,
+                fontSize: "0.85rem", flexShrink: 0,
               }}>
                 {user.email?.[0]?.toUpperCase()}
               </div>
@@ -109,6 +126,7 @@ export default function Navbar({ user, setPage, logout, page }) {
                   color: "#9ca3af", cursor: "pointer",
                   display: "flex", alignItems: "center",
                   gap: 4, fontSize: "0.8rem",
+                  whiteSpace: "nowrap",
                 }}
               >
                 <Ic d={I.logout} s={14} />
