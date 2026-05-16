@@ -4,43 +4,57 @@ export default function Footer({ setPage }) {
   return (
     <footer style={{
       background: "#060e33",
-      color: "rgba(255,255,255,.45)",
-      padding: "36px 24px",
-      textAlign: "center",
+      padding: "32px 20px 40px",
     }}>
-      {/* ✅ FIX: wrap logo in a div with filter to force it white */}
-      <div style={{ filter: "brightness(0) invert(1)", display: "inline-block" }}>
-        <Logo />
+      {/* LOGO */}
+      <div style={{
+        display: "flex",
+        justifyContent: "center",
+        marginBottom: 16,
+      }}>
+        <Logo light />
       </div>
 
-      <p style={{ fontSize: "0.78rem", marginTop: 14 }}>
-        © {new Date().getFullYear()} Arleece &nbsp;·&nbsp;
-        Fighting unfair agent fees, one listing at a time.
-      </p>
+      {/* LINKS */}
       <div style={{
-        display: "flex", gap: 20,
-        justifyContent: "center", marginTop: 10, flexWrap: "wrap",
+        display: "flex",
+        justifyContent: "center",
+        flexWrap: "wrap",
+        gap: "8px 20px",
+        marginBottom: 20,
       }}>
         {[
-          { label: "About", page: "home" },
-          { label: "Terms of Service", page: "terms" },
-          { label: "Privacy Policy", page: "terms" },
-          { label: "Contact Us", page: "home" },
-        ].map(({ label, page }) => (
+          { label: "About", pg: "home" },
+          { label: "Terms of Service", pg: "terms" },
+          { label: "Privacy Policy", pg: "terms" },
+          { label: "Contact Us", pg: "home" },
+        ].map(({ label, pg }) => (
           <span
             key={label}
-            onClick={() => setPage(page)}
+            onClick={() => setPage(pg)}
             style={{
-              fontSize: "0.76rem", cursor: "pointer",
-              // ✅ FIX: slightly brighter so links are visible
-              color: "rgba(255,255,255,.6)",
+              color: "rgba(255,255,255,.55)",
+              fontSize: "0.8rem",
+              cursor: "pointer",
               textDecoration: "underline",
+              textDecorationColor: "rgba(255,255,255,.2)",
             }}
           >
             {label}
           </span>
         ))}
       </div>
+
+      {/* COPYRIGHT */}
+      <p style={{
+        textAlign: "center",
+        color: "rgba(255,255,255,.35)",
+        fontSize: "0.72rem",
+        lineHeight: 1.6,
+      }}>
+        © {new Date().getFullYear()} Arleese{"\n"}
+        Fighting unfair agent fees, one listing at a time.
+      </p>
     </footer>
   )
 }

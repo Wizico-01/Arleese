@@ -26,15 +26,14 @@ export default function HomePage({ setPage }) {
       {/* ── HERO ── */}
       <section style={{
         background: "linear-gradient(140deg,#060e33 0%,#0d1b5e 60%,#162484 100%)",
-        padding: "90px 24px 80px",
-        position: "relative", overflow: "hidden",
+        padding: "60px 20px 60px", width: "100%", overflow: "hidden",
       }}>
         <div style={{
           position: "absolute", top: -120, right: -120,
           width: 520, height: 520, borderRadius: "50%",
           background: "rgba(255,255,255,.025)", pointerEvents: "none",
         }} />
-        <div style={{ maxWidth: 760, margin: "0 auto", position: "relative", zIndex: 1, textAlign: "center" }}>
+        <div style={{ maxWidth: "100%", margin: "0 auto", textAlign: "center", }}>
           <div style={{
             display: "inline-flex", alignItems: "center", gap: 8,
             background: "rgba(255,255,255,.08)",
@@ -65,7 +64,7 @@ export default function HomePage({ setPage }) {
             across all 36 states and unlock direct contact for just ₦100.
           </p>
 
-          <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, marginTop: 28, width: "100%", }}>
             <Btn variant="white" onClick={() => setPage('browse')}>
               Browse Apartments <Ic d={I.arrow} s={16} />
             </Btn>
@@ -85,8 +84,11 @@ export default function HomePage({ setPage }) {
 
           {/* STATS */}
           <div style={{
-            display: "flex", gap: 36, justifyContent: "center",
-            marginTop: 52, flexWrap: "wrap",
+            display: "grid", gridTemplateColumns: "1fr 1fr", 
+            gap: 20,
+            marginTop: 36,
+            maxWidth: 320,
+            margin: "36px auto 0",
           }}>
             {[
               ["1,200+", "Verified Listings"],
@@ -115,14 +117,14 @@ export default function HomePage({ setPage }) {
       </section>
 
       {/* ── HOW IT WORKS ── */}
-      <section style={{ background: "#f4f3ef", padding: "76px 24px" }}>
+      <section style={{ background: "#f4f3ef", padding: "48px 16px" }}>
         <div style={{ maxWidth: 1080, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 48 }}>
             <h2 style={{
               fontFamily: "'DM Serif Display', serif",
               fontSize: "2.1rem", color: "#0d1b5e", marginBottom: 10,
             }}>
-              How RentDirect Works
+             How Arleese Works
             </h2>
             <p style={{ color: "#6b7280", fontSize: "0.95rem" }}>
               Simple, transparent, and built for Nigerian tenants.
@@ -130,9 +132,8 @@ export default function HomePage({ setPage }) {
           </div>
 
           <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit,minmax(215px,1fr))",
-            gap: 20,
+            display: "grid", gridTemplateColumns: "1fr",
+            gap: 14,
           }}>
             {[
               { n: "01", e: "🔍", t: "Browse Listings", d: "Filter verified apartments by state, type, and price range." },
@@ -159,7 +160,7 @@ export default function HomePage({ setPage }) {
       </section>
 
       {/* ── LATEST LISTINGS ── */}
-      <section style={{ background: "#fff", padding: "76px 24px" }}>
+      <section style={{ background: "#fff", padding: "48px 16px" }}>
         <div style={{ maxWidth: 1080, margin: "0 auto" }}>
           <div style={{
             display: "flex", justifyContent: "space-between",
@@ -189,9 +190,8 @@ export default function HomePage({ setPage }) {
             </div>
           ) : (
             <div style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill,minmax(300px,1fr))",
-              gap: 22,
+              display: "grid", gridTemplateColumns: "1fr", 
+              gap: 16,
             }}>
               {listings.map(l => (
                 <ListingCard
@@ -207,8 +207,9 @@ export default function HomePage({ setPage }) {
 
       {/* ── LANDLORD CTA ── */}
       <section style={{
-        background: "linear-gradient(135deg,#0d1b5e,#1e3db5)",
-        padding: "70px 24px", textAlign: "center",
+        background: "linear-gradient(135deg,#0d1b5e,#1e3db5)", 
+        padding: "48px 20px",
+        textAlign: "center",
       }}>
         <div style={{ maxWidth: 560, margin: "0 auto", color: "#fff" }}>
           <h2 style={{

@@ -12,25 +12,62 @@ export default function LoginPage({ setPage, setUser }) {
   const [err, setErr] = useState("")
 
   const submit = async () => {
-  if (!email || !password) { setErr("Please fill in all fields."); return }
-  setLoading(true); setErr("")
+  if (!email || !password) { 
+    setErr("Please fill in all fields.") 
+    return 
+  }
+  setLoading(true)
+  setErr("")
+
   try {
     const { data, error } = await supabase.auth.signInWithPassword({
-      email, password
+      email: email,
+      password: password,
     })
-    if (error) { setErr(error.message); setLoading(false); return }
 
-    // Get user profile to know their role
-    const { data: profile } = await supabase
+    if (error) {
+      setErr(error.message)
+      setLoading(false)
+      return
+    }
+
+    if (!data.user) {
+      setErr("Login failed. Please check your email and password.")
+      setLoading(false)
+      return
+    }
+
+    // Get the user profile
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', data.user.id)
       .single()
 
-    setUser({ ...data.user, ...profile })
+    if (profileError || !profile) {
+      // Profile not found, use basic user info
+      setUser({ 
+        id: data.user.id,
+        name: data.user.email.split('@')[0], 
+        email: data.user.email, 
+        role: 'tenant' 
+      })
+      setPage('browse')
+      setLoading(false)
+      return
+    }
+
+    setUser({ 
+      id: data.user.id,
+      name: profile.full_name, 
+      email: data.user.email, 
+      role: profile.role,
+      verified: profile.nin_verified,
+    })
     setPage(profile.role === 'landlord' ? 'dashboard' : 'browse')
+
   } catch (e) {
-    setErr("Something went wrong. Please try again.")
+    setErr("Connection failed. Check your internet and try again.")
   }
   setLoading(false)
 }
