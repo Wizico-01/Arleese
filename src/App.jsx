@@ -1,3 +1,5 @@
+import BottomNav from './components/BottomNav'
+import TenantDashboard from './pages/TenantDashboard'
 import TermsPage from './pages/TermsPage'
 import { useState } from 'react'
 import Navbar from './components/Navbar'
@@ -10,7 +12,7 @@ import DashboardPage from './pages/DashboardPage'
 export default function App() {
   const [page, setPage] = useState('home')
   const [user, setUser] = useState(null)
-
+}
   const logout = () => {
     setUser(null)
     setPage('home')
@@ -22,23 +24,27 @@ export default function App() {
       case 'register':  return <RegisterPage setPage={setPage} setUser={setUser} />
       case 'browse':    return <BrowsePage user={user} setPage={setPage} />
       case 'dashboard': return <DashboardPage user={user} setPage={setPage} />
+      case 'saved': return <TenantDashboard user={user} setPage={setPage} />
       default:          return <HomePage setPage={setPage} />
     }
   }
 
   const hideNav = ['login', 'register'].includes(page)
+  const hideBottom = ['login', 'register'].includes(page)
 
   return (
-    <div>
-      {!hideNav && (
-        <Navbar
-          user={user}
-          setPage={setPage}
-          logout={logout}
-          page={page}
-        />
-      )}
-      {renderPage()}
-    </div>
-  )
-}
+  <div style={{ width:"100%", maxWidth:"100vw", overflowX:"hidden", paddingBottom: hideBottom ? 0 : 65 }}>
+    {!hideNav && (
+      <Navbar
+        user={user}
+        setPage={setPage}
+        logout={logout}
+        page={page}
+      />
+    )}
+    {renderPage()}
+    {!hideBottom && (
+      <BottomNav page={page} setPage={setPage} user={user} />
+    )}
+  </div>
+)

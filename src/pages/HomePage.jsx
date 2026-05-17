@@ -3,7 +3,6 @@ import { supabase } from '../lib/supabase'
 import { Btn, Card } from '../components/UI'
 import { Ic, I } from '../components/Icons'
 import ListingCard from '../components/ListingCard'
-import Footer from '../components/Footer'
 
 export default function HomePage({ setPage }) {
   const [listings, setListings] = useState([])
@@ -228,7 +227,6 @@ export default function HomePage({ setPage }) {
         </div>
       </section>
 
-      <Footer setPage={setPage} />
     </div>
   )
 }

@@ -54,9 +54,15 @@ const markAvailable = (id) => {
   ))
 }
   const add = (l) => {
-    setListings(p => [...p, { ...l, id: Date.now(), views: 0, unlocks: 0, status: "pending" }])
-    setShowAdd(false)
-  }
+  setListings(p => [...p, {
+    ...l,
+    id: Date.now(),
+    views: 0,
+    unlocks: 0,
+    status: "active",
+  }])
+  setShowAdd(false)
+}
 
   const stats = [
   { e: "🏠", l: "Total Listings", v: listings.length },
@@ -65,7 +71,7 @@ const markAvailable = (id) => {
   { e: "🔓", l: "Contacts Unlocked", v: listings.reduce((s, l) => s + l.unlocks, 0) },
 ]
 
-  if (showAdd) return <AddListingForm onBack={() => setShowAdd(false)} onSubmit={add} />
+  if (showAdd) return <AddListingForm onBack={() => setShowAdd(false)} onSubmit={add} user={user} />
 
   return (
     <div style={{ background: "#f4f3ef", minHeight: "100vh" }}>

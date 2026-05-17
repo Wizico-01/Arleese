@@ -15,6 +15,7 @@ export const Ic = ({ d, s = 18, stroke = "currentColor", fill = "none", sw = 1.8
 )
 
 export const I = {
+  building: "M3 21h18 M9 21V7l6-4v18 M3 21V11l6-4",
   home:    "M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z M9 22V12h6v10",
   search:  "M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z",
   bed:     "M2 9V19H22V9 M2 9c0-2 3-3 10-3s10 1 10 3 M2 14h20",
