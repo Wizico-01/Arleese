@@ -156,7 +156,7 @@ for (const vidFile of form.videoFiles || []) {
             lineHeight: 1.75,
             marginBottom: 24,
           }}>
-            Your NIN is currently under review by the Arleese team.
+            Your NIN is currently under review by the Arleece team.
             You will receive an email within <strong>10–30 minutes</strong> once
             your account is verified. Only verified landlords can list apartments.
           </p>

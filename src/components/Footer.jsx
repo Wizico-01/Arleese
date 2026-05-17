@@ -52,7 +52,7 @@ export default function Footer({ setPage }) {
         fontSize: "0.72rem",
         lineHeight: 1.6,
       }}>
-        © {new Date().getFullYear()} Arleese{"\n"}
+        © {new Date().getFullYear()} Arleece{"\n"}
         Fighting unfair agent fees, one listing at a time.
       </p>
     </footer>

@@ -149,7 +149,7 @@ export default function HomePage({ setPage, user }) {
               fontFamily: "'DM Serif Display', serif",
               fontSize: "2.1rem", color: "#0d1b5e", marginBottom: 10,
             }}>
-              How Arleese Works
+              How Arleece Works
             </h2>
             <p style={{ color: "#6b7280", fontSize: "0.95rem" }}>
               Simple, transparent, and built for Nigerian tenants.

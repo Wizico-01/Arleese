@@ -159,7 +159,7 @@ export default function RegisterPage({ setPage, setUser }) {
           </p>
         ) : (
           <p style={{ color: "#6b7280", lineHeight: 1.75, marginBottom: 26 }}>
-            Welcome to Arleese! You can now browse apartments across
+            Welcome to Arleece! You can now browse apartments across
             Nigeria — zero agent fees.
           </p>
         )}
@@ -191,7 +191,7 @@ export default function RegisterPage({ setPage, setUser }) {
             Create Your Account
           </h1>
           <p style={{ color: "#6b7280", fontSize: "0.85rem" }}>
-            Join thousands already using Arleese across Nigeria
+            Join thousands already using Arleece across Nigeria
           </p>
         </div>
 
@@ -367,7 +367,7 @@ export default function RegisterPage({ setPage, setUser }) {
                   width: 14, height: 14, flexShrink: 0,
                 }}
               />
-              I agree to Arleese{" "}
+              I agree to Arleece{" "}
               <span style={{ color: "#1e3db5", fontWeight: 600 }}>
                 Terms of Service
               </span>{" "}

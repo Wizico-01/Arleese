@@ -4,7 +4,7 @@ export default function Logo({ size = "md" }) {
   return (
     <img
       src="/logo.png"
-      alt="Arleese Nigeria"
+      alt="Arleece Nigeria"
       style={{
         height: sizes[size],
         width: "auto",
