@@ -4,7 +4,7 @@ import { Btn, Card } from '../components/UI'
 import { Ic, I } from '../components/Icons'
 import ListingCard from '../components/ListingCard'
 
-export default function HomePage({ setPage }) {
+export default function HomePage({ setPage, user }) {
   const [listings, setListings] = useState([])
 
   useEffect(() => {
@@ -23,16 +23,20 @@ export default function HomePage({ setPage }) {
   return (
     <div>
       {/* ── HERO ── */}
+      {/* FIX 1: Added position: "relative" so the absolute orb is contained */}
       <section style={{
         background: "linear-gradient(140deg,#060e33 0%,#0d1b5e 60%,#162484 100%)",
-        padding: "60px 20px 60px", width: "100%", overflow: "hidden",
+        padding: "60px 20px 60px",
+        width: "100%",
+        overflow: "hidden",
+        position: "relative", // ← FIXED: was missing, causing orb to escape
       }}>
         <div style={{
-          position: "absolute", top: -120, right: -120,
-          width: 520, height: 520, borderRadius: "50%",
+          position: "absolute", top: -120, right: 0,
+          width: "min(520px, 80vw)", height: 520, borderRadius: "50%",
           background: "rgba(255,255,255,.025)", pointerEvents: "none",
         }} />
-        <div style={{ maxWidth: "100%", margin: "0 auto", textAlign: "center", }}>
+        <div style={{ maxWidth: "100%", margin: "0 auto", textAlign: "center" }}>
           <div style={{
             display: "inline-flex", alignItems: "center", gap: 8,
             background: "rgba(255,255,255,.08)",
@@ -59,35 +63,57 @@ export default function HomePage({ setPage }) {
             lineHeight: 1.75, maxWidth: 520,
             margin: "0 auto 38px",
           }}>
-            No agents. No 20% fees. Browse verified landlord listings
-            across all 36 states and unlock direct contact for just ₦100.
+            No agents. No 20% commission. No Inspection fees. Browse verified landlord listings
+            across all 36 states and unlock their direct contacts.
           </p>
 
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, marginTop: 28, width: "100%", }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, marginTop: 28, width: "100%" }}>
             <Btn variant="white" onClick={() => setPage('browse')}>
               Browse Apartments <Ic d={I.arrow} s={16} />
             </Btn>
-            <button
-              onClick={() => setPage('register')}
-              style={{
-                background: "transparent", color: "#fff",
-                border: "1.5px solid rgba(255,255,255,.32)",
-                borderRadius: 9, padding: "12px 26px",
-                fontSize: "0.9rem", fontWeight: 600,
-                cursor: "pointer", fontFamily: "inherit",
-              }}
-            >
-              List Your Property
-            </button>
+
+            {!user && (
+              <button
+                onClick={() => setPage('register')}
+                style={{
+                  background: "transparent", color: "#fff",
+                  border: "1.5px solid rgba(255,255,255,.32)",
+                  borderRadius: 9, padding: "12px 26px",
+                  fontSize: "0.9rem", fontWeight: 600,
+                  cursor: "pointer", fontFamily: "inherit",
+                  width: "100%",
+                }}
+              >
+                List Your Property
+              </button>
+            )}
+
+            {user?.role === 'landlord' && (
+              <button
+                onClick={() => setPage('dashboard')}
+                style={{
+                  background: "transparent", color: "#fff",
+                  border: "1.5px solid rgba(255,255,255,.32)",
+                  borderRadius: 9, padding: "12px 26px",
+                  fontSize: "0.9rem", fontWeight: 600,
+                  cursor: "pointer", fontFamily: "inherit",
+                  width: "100%",
+                }}
+              >
+                Go to Dashboard →
+              </button>
+            )}
           </div>
 
           {/* STATS */}
+          {/* FIX 2: Removed duplicate marginTop/margin conflict — use a single margin shorthand */}
           <div style={{
-            display: "grid", gridTemplateColumns: "1fr 1fr", 
+            display: "grid", gridTemplateColumns: "1fr 1fr",
             gap: 20,
-            marginTop: 36,
             maxWidth: 320,
-            margin: "36px auto 0",
+            margin: "36px auto 0", // ← FIXED: was split across marginTop:36 AND margin:"36px auto 0";
+                                   //   the second `margin` key silently overwrote the first.
+                                   //   Now only one property handles all four sides.
           }}>
             {[
               ["1,200+", "Verified Listings"],
@@ -123,15 +149,17 @@ export default function HomePage({ setPage }) {
               fontFamily: "'DM Serif Display', serif",
               fontSize: "2.1rem", color: "#0d1b5e", marginBottom: 10,
             }}>
-             How Arleese Works
+              How Arleese Works
             </h2>
             <p style={{ color: "#6b7280", fontSize: "0.95rem" }}>
               Simple, transparent, and built for Nigerian tenants.
             </p>
           </div>
 
+          {/* FIX 3: Use a responsive column count instead of always "1fr" */}
           <div style={{
-            display: "grid", gridTemplateColumns: "1fr",
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", // ← FIXED: was "1fr" (always single-column)
             gap: 14,
           }}>
             {[
@@ -188,8 +216,10 @@ export default function HomePage({ setPage }) {
               </p>
             </div>
           ) : (
+            // FIX 3 (same pattern): responsive columns for listing cards too
             <div style={{
-              display: "grid", gridTemplateColumns: "1fr", 
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", // ← FIXED: was "1fr"
               gap: 16,
             }}>
               {listings.map(l => (
@@ -205,28 +235,29 @@ export default function HomePage({ setPage }) {
       </section>
 
       {/* ── LANDLORD CTA ── */}
-      <section style={{
-        background: "linear-gradient(135deg,#0d1b5e,#1e3db5)", 
-        padding: "48px 20px",
-        textAlign: "center",
-      }}>
-        <div style={{ maxWidth: 560, margin: "0 auto", color: "#fff" }}>
-          <h2 style={{
-            fontFamily: "'DM Serif Display', serif",
-            fontSize: "2.1rem", marginBottom: 14,
-          }}>
-            Are You a Landlord?
-          </h2>
-          <p style={{ color: "rgba(255,255,255,.7)", lineHeight: 1.75, marginBottom: 30 }}>
-            List your vacant apartment and connect directly with thousands of
-            verified tenants. Zero agent commission. Ever.
-          </p>
-          <Btn variant="white" onClick={() => setPage('register')}>
-            List Your Apartment Free →
-          </Btn>
-        </div>
-      </section>
-
+      {user?.role !== 'landlord' && (
+        <section style={{
+          background: "linear-gradient(135deg,#0d1b5e,#1e3db5)",
+          padding: "48px 20px",
+          textAlign: "center",
+        }}>
+          <div style={{ maxWidth: 560, margin: "0 auto", color: "#fff" }}>
+            <h2 style={{
+              fontFamily: "'DM Serif Display', serif",
+              fontSize: "2.1rem", marginBottom: 14,
+            }}>
+              Are You a Landlord?
+            </h2>
+            <p style={{ color: "rgba(255,255,255,.7)", lineHeight: 1.75, marginBottom: 30 }}>
+              List your vacant apartment and connect directly with thousands of
+              verified tenants. Zero agent commission.
+            </p>
+            <Btn variant="white" onClick={() => setPage('register')}>
+              List Your Apartment Free →
+            </Btn>
+          </div>
+        </section>
+      )}
     </div>
   )
 }

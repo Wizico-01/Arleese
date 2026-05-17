@@ -9,6 +9,7 @@ import BrowsePage from './pages/BrowsePage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import DashboardPage from './pages/DashboardPage'
+import ProfilePage from './pages/ProfilePage'
 
 export default function App() {
   const [page, setPage] = useState('home')
@@ -57,7 +58,8 @@ export default function App() {
       case 'dashboard': return <DashboardPage user={user} setPage={setPage} />
       case 'saved':     return <TenantDashboard user={user} setPage={setPage} />
       case 'terms':     return <TermsPage setPage={setPage} />
-      default:          return <HomePage setPage={setPage} />
+      case 'profile': return <ProfilePage user={user} setPage={setPage} logout={logout} />
+      default: return <HomePage setPage={setPage} user={user} />
     }
   }
 

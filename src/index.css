@@ -8,7 +8,7 @@
 
 html, body {
   width: 100%;
-  max-width: 100vw;
+  max-width: 100%;
   overflow-x: hidden;
   font-family: 'DM Sans', sans-serif;
   background: #f4f3ef;
@@ -37,4 +37,10 @@ img {
 ::-webkit-scrollbar-thumb {
   background: #0d1b5e;
   border-radius: 4px;
+}
+
+#root {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
