@@ -5,9 +5,9 @@ import { Btn, Field, Sel, Card, ErrBox } from '../components/UI'
 import { Ic, I } from '../components/Icons'
 import { NG_STATES } from '../data/constants'
 
-export default function RegisterPage({ setPage, setUser }) {
-  const [role, setRole] = useState("")
-  const [step, setStep] = useState(0)
+export default function RegisterPage({ setPage, setUser, defaultRole }) {
+  const [role, setRole] = useState(defaultRole || "")
+  const [step, setStep] = useState(defaultRole ? 1 : 0)
   const [form, setForm] = useState({
     name: "", email: "", phone: "", password: "",
     confirm: "", state: "", nin: "",

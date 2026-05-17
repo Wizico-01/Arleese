@@ -252,7 +252,7 @@ export default function HomePage({ setPage, user }) {
               List your vacant apartment and connect directly with thousands of
               verified tenants. Zero agent commission.
             </p>
-            <Btn variant="white" onClick={() => setPage('register')}>
+            <Btn variant="white" onClick={() => setPage('register-landlord')}>
               List Your Apartment Free →
             </Btn>
           </div>

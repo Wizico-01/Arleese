@@ -1,0 +1,22 @@
+{
+  "name": "Arleece",
+  "short_name": "Arleece",
+  "description": "Rent directly from verified landlords. Zero agent fees.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f4f3ef",
+  "theme_color": "#0d1b5e",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/logo-icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/logo-icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

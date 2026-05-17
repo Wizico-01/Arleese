@@ -28,7 +28,7 @@ export default function Navbar({ user, setPage, logout, page }) {
           onClick={() => setPage('home')}
           style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
         >
-          <Logo size="sm" />
+          <Logo size="sm" style={{ height: 22 }} />
         </button>
 
         {/* RIGHT SIDE */}
@@ -41,7 +41,7 @@ export default function Navbar({ user, setPage, logout, page }) {
                   background: "none", border: "none",
                   color: "#0d1b5e", padding: "7px 12px",
                   borderRadius: 8, cursor: "pointer",
-                  fontSize: "0.85rem", fontWeight: 500,
+                  fontSize: "0.78rem", fontWeight: 500,
                 }}
               >
                 Login
@@ -84,7 +84,7 @@ export default function Navbar({ user, setPage, logout, page }) {
                 </button>
               )}
               <div
-                onClick={logout}
+                onClick={() => setPage('profile')}
                 style={{
                   width: 34, height: 34, borderRadius: "50%",
                   background: "#0d1b5e", color: "#fff",

@@ -59,6 +59,7 @@ export default function App() {
       case 'saved':     return <TenantDashboard user={user} setPage={setPage} />
       case 'terms':     return <TermsPage setPage={setPage} />
       case 'profile': return <ProfilePage user={user} setPage={setPage} logout={logout} />
+      case 'register-landlord': return <RegisterPage setPage={setPage} setUser={setUser} defaultRole="landlord" />
       default: return <HomePage setPage={setPage} user={user} />
     }
   }
