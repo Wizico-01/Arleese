@@ -318,7 +318,7 @@ for (const vidFile of form.videoFiles || []) {
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <Field
-                  label="Bathrooms"
+                  label="Kitchen"
                   type="number"
                   placeholder="e.g. 2"
                   value={form.kitchs}
@@ -326,7 +326,7 @@ for (const vidFile of form.videoFiles || []) {
                   required
                 />
                 <Field
-                  label="Kitchen"
+                  label="Bathroom"
                   type="number"
                   placeholder="e.g. 1"
                   value={form.baths}
