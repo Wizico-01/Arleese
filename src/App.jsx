@@ -12,7 +12,9 @@ import DashboardPage from './pages/DashboardPage'
 import ProfilePage from './pages/ProfilePage'
 
 export default function App() {
-  const [page, setPage] = useState('home')
+  const [page, setPage] = useState(
+  window.location.hash.replace('#', '') || 'home'
+)
   const [user, setUser] = useState(null)
 
   useEffect(() => {
@@ -37,6 +39,15 @@ export default function App() {
       }
     })
 
+useEffect(() => {
+  const handleBack = () => {
+    const hash = window.location.hash.replace('#', '') || 'home'
+    setPage(hash)
+  }
+  window.addEventListener('hashchange', handleBack)
+  return () => window.removeEventListener('hashchange', handleBack)
+}, [])
+
     supabase.auth.onAuthStateChange((_event, session) => {
       if (!session) {
         setUser(null)
@@ -44,10 +55,14 @@ export default function App() {
     })
   }, [])
 
+  const navigateTo = (newPage) => {
+  window.location.hash = newPage
+  navigateTo(newPage)
+}
   const logout = async () => {
     await supabase.auth.signOut()
     setUser(null)
-    setPage('home')
+    navigateTo('home')
   }
 
   const renderPage = () => {

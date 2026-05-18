@@ -83,19 +83,6 @@ export default function Navbar({ user, setPage, logout, page }) {
                   Dashboard
                 </button>
               )}
-              <div
-                onClick={() => setPage('profile')}
-                style={{
-                  width: 34, height: 34, borderRadius: "50%",
-                  background: "#0d1b5e", color: "#fff",
-                  display: "flex", alignItems: "center",
-                  justifyContent: "center", fontWeight: 700,
-                  fontSize: "0.88rem", cursor: "pointer",
-                  flexShrink: 0,
-                }}
-              >
-                {user.email?.[0]?.toUpperCase()}
-              </div>
             </div>
           )}
         </div>

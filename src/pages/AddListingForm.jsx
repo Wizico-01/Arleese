@@ -322,17 +322,17 @@ for (const vidFile of form.videoFiles || []) {
                   type="number"
                   placeholder="e.g. 2"
                   value={form.kitchs}
-                  onChange={e => set("beds", e.target.value)}
+                  onChange={e => set("kitchs", e.target.value)}
                   required
                 />
                 <Field
-                  label="Bathroom"
-                  type="number"
-                  placeholder="e.g. 1"
-                  value={form.baths}
-                  onChange={e => set("kiths", e.target.value)}
+                label="Bathrooms"
+                type="number"
+                 placeholder="e.g. 1"
+                 value={form.baths}
+                  onChange={e => set("baths", e.target.value)}
                   required
-                />
+                  />
               </div>
 
               {/* AMENITIES */}
