@@ -13,10 +13,11 @@ import ProfilePage from './pages/ProfilePage'
 
 export default function App() {
   const [page, setPage] = useState(
-  window.location.hash.replace('#', '') || 'home'
-)
+    window.location.hash.replace('#', '') || 'home'
+  )
   const [user, setUser] = useState(null)
 
+  // useEffect #1 — auth session + auth state listener
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
@@ -39,15 +40,6 @@ export default function App() {
       }
     })
 
-useEffect(() => {
-  const handleBack = () => {
-    const hash = window.location.hash.replace('#', '') || 'home'
-    setPage(hash)
-  }
-  window.addEventListener('hashchange', handleBack)
-  return () => window.removeEventListener('hashchange', handleBack)
-}, [])
-
     supabase.auth.onAuthStateChange((_event, session) => {
       if (!session) {
         setUser(null)
@@ -55,10 +47,21 @@ useEffect(() => {
     })
   }, [])
 
+  // useEffect #2 — hash-based back navigation (separate, top-level)
+  useEffect(() => {
+    const handleBack = () => {
+      const hash = window.location.hash.replace('#', '') || 'home'
+      setPage(hash)
+    }
+    window.addEventListener('hashchange', handleBack)
+    return () => window.removeEventListener('hashchange', handleBack)
+  }, [])
+
   const navigateTo = (newPage) => {
-  window.location.hash = newPage
-  navigateTo(newPage)
-}
+    window.location.hash = newPage
+    setPage(newPage)
+  }
+
   const logout = async () => {
     await supabase.auth.signOut()
     setUser(null)
@@ -73,13 +76,13 @@ useEffect(() => {
       case 'dashboard': return <DashboardPage user={user} setPage={setPage} />
       case 'saved':     return <TenantDashboard user={user} setPage={setPage} />
       case 'terms':     return <TermsPage setPage={setPage} />
-      case 'profile': return <ProfilePage user={user} setPage={setPage} logout={logout} />
+      case 'profile':   return <ProfilePage user={user} setPage={setPage} logout={logout} />
       case 'register-landlord': return <RegisterPage setPage={setPage} setUser={setUser} defaultRole="landlord" />
-      default: return <HomePage setPage={setPage} user={user} />
+      default:          return <HomePage setPage={setPage} user={user} />
     }
   }
 
-  const hideNav = ['login', 'register'].includes(page)
+  const hideNav    = ['login', 'register'].includes(page)
   const hideBottom = ['login', 'register'].includes(page)
 
   return (
