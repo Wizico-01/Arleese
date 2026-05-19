@@ -10,7 +10,7 @@ export default function AddListingForm({ onBack, onSubmit, user }) {
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState({
   title: "", type: "", state: "", area: "",
-  price: "", beds: "", baths: "", size: "",
+  price: "", kitchs: "", baths: "",
   desc: "", amenities: [], images: [], imageFiles: [],
   videos: [], videoFiles: [],
 })
@@ -33,11 +33,11 @@ export default function AddListingForm({ onBack, onSubmit, user }) {
   }
 
   const validateStep2 = () => {
-    if (!form.beds || !form.baths) {
-      setErr("Please specify bedrooms and bathrooms."); return false
-    }
-    setErr(""); return true
+  if (!form.kitchs || !form.baths) {
+    setErr("Please specify kitchen and bathrooms."); return false
   }
+  setErr(""); return true
+}
 
   const handleSubmit = async () => {
     setLoading(true)
@@ -84,9 +84,8 @@ for (const vidFile of form.videoFiles || []) {
         state: form.state,
         area: form.area,
         price: Number(form.price),
-        beds: Number(form.beds),
+        kitchs: Number(form.kitchs),
         baths: Number(form.baths),
-        size: form.size,
         description: form.desc,
         amenities: form.amenities,
         images: imageUrls,
@@ -108,9 +107,8 @@ for (const vidFile of form.videoFiles || []) {
         state: form.state,
         area: form.area,
         price: Number(form.price),
-        beds: Number(form.beds),
+        kitchs: Number(form.kitchs),
         baths: Number(form.baths),
-        size: form.size,
         description: form.desc,
         amenities: form.amenities,
         images: imageUrls,
@@ -607,7 +605,7 @@ for (const vidFile of form.videoFiles || []) {
                   ["Type", form.type],
                   ["Location", `${form.area}, ${form.state}`],
                   ["Annual Rent", form.price ? `₦${Number(form.price).toLocaleString()}` : "—"],
-                  ["Bedrooms", form.beds || "—"],
+                  ["Kitchen", form.kitchs || "—"],
                   ["Bathrooms", form.baths || "—"],
                   ["Photos", `${form.images.length} uploaded`],
                   ["Videos", form.videos.length > 0 ? `${form.videos.length} uploaded` : "None"],

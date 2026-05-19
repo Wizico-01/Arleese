@@ -164,8 +164,8 @@ export default function HomePage({ setPage, user }) {
           }}>
             {[
               { n: "01", e: "🔍", t: "Browse Listings", d: "Filter verified apartments by state, type, and price range." },
-              { n: "02", e: "🏠", t: "View Full Details", d: "See photos, amenities, and the exact rent — no hidden fees." },
-              { n: "03", e: "🔒", t: "Pay ₦100", d: "One-time flat fee via Paystack or bank transfer to unlock contact." },
+              { n: "02", e: "🏠", t: "View Full Details", d: "See photos, amenities, and the exact rent, no hidden fees." },
+              { n: "03", e: "🔒", t: "Pay ₦100", d: "One-time flat fee to unlock contact." },
               { n: "04", e: "📞", t: "Call the Landlord", d: "Get direct phone and address. No middleman. Move in your way." },
             ].map(s => (
               <Card key={s.n} style={{ padding: 26 }}>

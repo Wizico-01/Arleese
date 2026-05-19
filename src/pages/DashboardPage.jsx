@@ -292,11 +292,6 @@ const markAvailable = (id) => {
                 </div>
               </div>
             </div>
-            <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 10, padding: "13px 15px", fontSize: "0.81rem", color: "#78350f", lineHeight: 1.7 }}>
-              <strong>Verification in progress:</strong> Your NIN and documents are under review.
-              You will receive an email notification within 24–48 hours once your
-              account is fully verified and your listings are live.
-            </div>
           </Card>
         )}
       </div>
