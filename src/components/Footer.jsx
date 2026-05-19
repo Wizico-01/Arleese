@@ -1,26 +1,26 @@
 import Logo from './Logo'
 
 export default function Footer({ setPage }) {
+
+  const handleNav = (pg) => {
+    if (typeof setPage === 'function') {
+      setPage(pg)
+    }
+  }
+
   return (
     <footer style={{
       background: "#060e33",
       padding: "32px 20px 40px",
+      width: "100%",
     }}>
-      {/* LOGO */}
-      <div style={{
-        display: "flex",
-        justifyContent: "center",
-        marginBottom: 16,
-      }}>
-        <Logo light />
-      </div>
 
       {/* LINKS */}
       <div style={{
         display: "flex",
         justifyContent: "center",
         flexWrap: "wrap",
-        gap: "8px 20px",
+        gap: "10px 24px",
         marginBottom: 20,
       }}>
         {[
@@ -29,19 +29,23 @@ export default function Footer({ setPage }) {
           { label: "Privacy Policy", pg: "terms" },
           { label: "Contact Us", pg: "home" },
         ].map(({ label, pg }) => (
-          <span
+          <button
             key={label}
-            onClick={() => setPage(pg)}
+            onClick={() => handleNav(pg)}
             style={{
-              color: "rgba(255,255,255,.55)",
-              fontSize: "0.8rem",
+              background: "none",
+              border: "none",
+              color: "rgba(255,255,255,.65)",
+              fontSize: "0.82rem",
               cursor: "pointer",
+              fontFamily: "inherit",
+              padding: "4px 0",
               textDecoration: "underline",
-              textDecorationColor: "rgba(255,255,255,.2)",
+              textDecorationColor: "rgba(255,255,255,.25)",
             }}
           >
             {label}
-          </span>
+          </button>
         ))}
       </div>
 
@@ -50,9 +54,10 @@ export default function Footer({ setPage }) {
         textAlign: "center",
         color: "rgba(255,255,255,.35)",
         fontSize: "0.72rem",
-        lineHeight: 1.6,
+        lineHeight: 1.7,
       }}>
-        © {new Date().getFullYear()} Arleece{"\n"}
+        © {new Date().getFullYear()} Arleece.
+        <br />
         Fighting unfair agent fees, one listing at a time.
       </p>
     </footer>

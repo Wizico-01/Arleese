@@ -68,7 +68,7 @@ const markAvailable = (id) => {
   { e: "🏠", l: "Total Listings", v: listings.length },
   { e: "✅", l: "Active", v: listings.filter(l => l.status === "active").length },
   { e: "🔑", l: "Rented Out", v: listings.filter(l => l.status === "rented").length },
-  { e: "🔓", l: "Contacts Unlocked", v: listings.reduce((s, l) => s + l.unlocks, 0) },
+  { e: "🔓", l: "Contacts Unlocked", v: listings.reduce((s, l) => s + (l.unlocks || 0), 0) },
 ]
 
   if (showAdd) return <AddListingForm onBack={() => setShowAdd(false)} onSubmit={add} user={user} />

@@ -22,9 +22,7 @@ export default function ListingModal({ listing: l, onClose, onUnlock, user, setP
       >
         {/* IMAGE */}
         <div style={{ position: "relative" }}>
-          <img
-            src={l.img}
-            alt={l.title}
+          <img src={l.images?.[0] || l.img || ""} alt={l.title}
             style={{
               width: "100%", height: 250,
               objectFit: "cover",
@@ -90,8 +88,8 @@ export default function ListingModal({ listing: l, onClose, onUnlock, user, setP
             paddingBottom: 14, borderBottom: "1px solid #f0efea", marginBottom: 16,
           }}>
             {[
-              { d: I.bed, v: `${l.beds} Bedroom${l.beds > 1 ? "s" : ""}` },
-              { d: I.bath, v: `${l.baths} Bathroom${l.baths > 1 ? "s" : ""}` },
+              { d: null, v: `${l.kitchs || 0} Kitchen` },
+              { d: null, v: `${l.baths || 0} Bathroom${l.baths > 1 ? "s" : ""}` },
               { d: null, v: l.size },
               { d: null, v: l.type },
             ].map(({ d, v }) => (
@@ -104,6 +102,35 @@ export default function ListingModal({ listing: l, onClose, onUnlock, user, setP
               </div>
             ))}
           </div>
+  
+{/* PHOTO GALLERY */}
+{l.images?.length > 0 && (
+  <div style={{
+    display: "grid",
+    gridTemplateColumns: "repeat(3,1fr)",
+    gap: 6, marginBottom: 14,
+  }}>
+    {l.images.map((img, idx) => (
+      <img key={idx} src={img} alt=""
+        style={{ width:"100%", height:80, objectFit:"cover", borderRadius:8 }}
+      />
+    ))}
+  </div>
+)}
+
+{/* VIDEOS */}
+{l.videos?.length > 0 && (
+  <div style={{ marginBottom: 14 }}>
+    <p style={{ fontSize:"0.78rem", fontWeight:600, color:"#374151", marginBottom:8 }}>
+      Videos
+    </p>
+    {l.videos.map((vid, idx) => (
+      <video key={idx} src={vid} controls
+        style={{ width:"100%", borderRadius:10, marginBottom:8, maxHeight:200 }}
+      />
+    ))}
+  </div>
+)}
 
           {/* AMENITIES */}
           <div style={{ marginBottom: 18 }}>

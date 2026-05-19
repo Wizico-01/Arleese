@@ -1,6 +1,11 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js')
+  }
+</script>
     <link rel="manifest" href="/manifest.json" />
 <meta name="theme-color" content="#0d1b5e" />
 <meta name="mobile-web-app-capable" content="yes" />

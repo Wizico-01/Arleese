@@ -61,6 +61,22 @@ export default function App() {
     window.location.hash = newPage
     setPage(newPage)
   }
+useEffect(() => {
+  const handleBack = (e) => {
+    e.preventDefault()
+    if (page === 'home') {
+      // Show exit warning
+      if (window.confirm("Press OK to exit Arleece")) {
+        window.history.back()
+      }
+    } else {
+      // Go back to previous page
+      window.history.back()
+    }
+  }
+  window.addEventListener('popstate', handleBack)
+  return () => window.removeEventListener('popstate', handleBack)
+}, [page])
 
   const logout = async () => {
     await supabase.auth.signOut()

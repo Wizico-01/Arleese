@@ -26,8 +26,8 @@ export default function ListingCard({ listing, onClick }) {
       {/* IMAGE */}
       <div style={{ position: "relative" }}>
         <img
-          src={listing.img}
-          alt={listing.title}
+         src={listing.images?.[0] || listing.img || ""}
+         alt={listing.title}
           style={{ width: "100%", height: 196, objectFit: "cover", display: "block" }}
         />
         <div style={{ position: "absolute", top: 10, left: 10, display: "flex", gap: 6 }}>
@@ -48,7 +48,10 @@ export default function ListingCard({ listing, onClick }) {
           background: "rgba(0,0,0,.55)", color: "#fff",
           borderRadius: 6, padding: "2px 9px", fontSize: "0.7rem",
         }}>
-          {listing.days === 0 ? "Today" : listing.days === 1 ? "Yesterday" : `${listing.days}d ago`}
+          {!listing.days && listing.days !== 0 ? "New" :
+            listing.days === 0 ? "Today" :
+            listing.days === 1 ? "Yesterday" :
+            `${listing.days}d ago`}
         </div>
       </div>
 
@@ -72,7 +75,7 @@ export default function ListingCard({ listing, onClick }) {
 
         <div style={{ display: "flex", gap: 12, marginBottom: 14 }}>
           <span style={{ display: "flex", alignItems: "center", gap: 3, color: "#6b7280", fontSize: "0.77rem" }}>
-            <Ic d={I.bed} s={12} /> {listing.beds} Bed
+         🍳{listing.kitchs} Kitchen
           </span>
           <span style={{ display: "flex", alignItems: "center", gap: 3, color: "#6b7280", fontSize: "0.77rem" }}>
             <Ic d={I.bath} s={12} /> {listing.baths} Bath
