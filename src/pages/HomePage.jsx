@@ -1,3 +1,4 @@
+import { Search, Home, Lock, Phone } from 'lucide-react';
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { Btn, Card } from '../components/UI'
@@ -163,10 +164,10 @@ export default function HomePage({ setPage, user }) {
             gap: 14,
           }}>
             {[
-              { n: "01", e: "🔍", t: "Browse Listings", d: "Filter verified apartments by state, type, and price range." },
-              { n: "02", e: "🏠", t: "View Full Details", d: "See photos, amenities, and the exact rent, no hidden fees." },
-              { n: "03", e: "🔒", t: "Pay ₦100", d: "One-time flat fee to unlock contact." },
-              { n: "04", e: "📞", t: "Call the Landlord", d: "Get direct phone and address. No middleman. Move in your way." },
+              { n: "01", icon: <Search size={34} strokeWidth={1.5} style={{ color: "#0d1b5e" }} />, t: "Browse Listings", d: "Filter verified apartments by state, type, and price range." },
+              { n: "02", icon: <Home size={34} strokeWidth={1.5} style={{ color: "#0d1b5e" }} />, t: "View Full Details", d: "See photos, amenities, and the exact rent, no hidden fees." },
+              { n: "03", icon: <Lock size={34} strokeWidth={1.5} style={{ color: "#0d1b5e" }} />, t: "Pay ₦100", d: "One-time flat fee to unlock contact." },
+              { n: "04", icon: <Phone size={34} strokeWidth={1.5} style={{ color: "#0d1b5e" }} />, t: "Call the Landlord", d: "Get direct phone and address. No middleman. Move in your way." },
             ].map(s => (
               <Card key={s.n} style={{ padding: 26 }}>
                 <div style={{
@@ -175,7 +176,9 @@ export default function HomePage({ setPage, user }) {
                 }}>
                   {s.n}
                 </div>
-                <div style={{ fontSize: "1.9rem", marginBottom: 12 }}>{s.e}</div>
+                <div style={{ display: "flex", alignItems: "center", marginBottom: 16, height: 40 }}>
+                  {s.icon}
+                </div>
                 <h3 style={{ fontSize: "0.96rem", fontWeight: 700, color: "#0d1b5e", marginBottom: 7 }}>
                   {s.t}
                 </h3>
@@ -253,7 +256,7 @@ export default function HomePage({ setPage, user }) {
               verified tenants. Zero agent commission.
             </p>
             <Btn variant="white" onClick={() => setPage('register-landlord')}>
-              List Your Apartment Free →
+              List Your Apartment Now →
             </Btn>
           </div>
         </section>
