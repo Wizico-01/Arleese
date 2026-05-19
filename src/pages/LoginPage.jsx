@@ -12,65 +12,64 @@ export default function LoginPage({ setPage, setUser }) {
   const [err, setErr] = useState("")
 
   const submit = async () => {
-  if (!email || !password) { 
-    setErr("Please fill in all fields.") 
-    return 
-  }
-  setLoading(true)
-  setErr("")
-
-  try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: email,
-      password: password,
-    })
-
-    if (error) {
-      setErr(error.message)
-      setLoading(false)
-      return
+    if (!email || !password) { 
+      setErr("Please fill in all fields.") 
+      return 
     }
+    setLoading(true)
+    setErr("")
 
-    if (!data.user) {
-      setErr("Login failed. Please check your email and password.")
-      setLoading(false)
-      return
-    }
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: password,
+      })
 
-    // Get the user profile
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', data.user.id)
-      .single()
+      if (error) {
+        setErr(error.message)
+        return
+      }
 
-    if (profileError || !profile) {
-      // Profile not found, use basic user info
+      if (!data.user) {
+        setErr("Login failed. Please check your email and password.")
+        return
+      }
+
+      // Get the user profile
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', data.user.id)
+        .single()
+
+      if (profileError || !profile) {
+        // Profile not found, use basic user info
+        setUser({ 
+          id: data.user.id,
+          name: data.user.email.split('@')[0], 
+          email: data.user.email, 
+          role: 'tenant' 
+        })
+        setPage('browse')
+        return
+      }
+
       setUser({ 
         id: data.user.id,
-        name: data.user.email.split('@')[0], 
+        name: profile.full_name, 
         email: data.user.email, 
-        role: 'tenant' 
+        role: profile.role,
+        verified: profile.nin_verified,
       })
-      setPage('browse')
+      setPage(profile.role === 'landlord' ? 'dashboard' : 'browse')
+
+    } catch (e) {
+      setErr("Connection failed. Check your internet and try again.")
+    } finally {
+      // This guarantees the loading state turns off safely no matter what route the code takes
       setLoading(false)
-      return
     }
-
-    setUser({ 
-      id: data.user.id,
-      name: profile.full_name, 
-      email: data.user.email, 
-      role: profile.role,
-      verified: profile.nin_verified,
-    })
-    setPage(profile.role === 'landlord' ? 'dashboard' : 'browse')
-
-  } catch (e) {
-    setErr("Connection failed. Check your internet and try again.")
   }
-  setLoading(false)
-}
 
   return (
     <div style={{
