@@ -12,11 +12,28 @@ export default function ProfilePage({ user, setPage, logout }) {
 
     if (user.role === 'tenant') {
       // Fetch tenant's unlocked contacts
-      supabase
-        .from('unlocks')
-        .select('*, listings(title, area, state, price)')
-        .eq('tenant_id', user.id)
-        .then(({ data }) => { if (data) setUnlocks(data) })
+      const { data, error } = await supabase
+  .from('unlocks')
+  .select(`
+    id,
+    amount,
+    payment_method,
+    paid_at,
+    listing_id,
+    listings (
+      id,
+      title,
+      area,
+      state,
+      price,
+      images
+    )
+  `)
+  .eq('tenant_id', user.id)
+  .order('paid_at', { ascending: false })
+
+if (data) setUnlocks(data)
+if (error) console.log('Unlocks error:', error)
     }
 
     if (user.role === 'landlord') {

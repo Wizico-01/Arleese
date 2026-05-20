@@ -1,55 +1,27 @@
 export default function TermsPage({ setPage }) {
   return (
-    <div style={{ maxWidth: 800, margin: "0 auto", padding: "48px 24px" }}>
+    <div style={{ padding: "40px 20px", maxWidth: 700, margin: "0 auto" }}>
       <button
         onClick={() => setPage('home')}
-        style={{
-          background: "none", border: "none",
-          color: "#0d1b5e", fontWeight: 600,
-          cursor: "pointer", marginBottom: 24,
-          fontSize: "0.9rem", fontFamily: "inherit",
-        }}
+        style={{ background: "none", border: "none", color: "#0d1b5e",
+          fontWeight: 600, cursor: "pointer", marginBottom: 24,
+          fontSize: "0.9rem", fontFamily: "inherit" }}
       >
-        ← Back to Home
+        ← Back
       </button>
-
-      <h1 style={{
-        fontFamily: "'DM Serif Display', serif",
-        fontSize: "2rem", color: "#0d1b5e", marginBottom: 8,
-      }}>
+      <h1 style={{ fontFamily: "'DM Serif Display',serif",
+        fontSize: "1.8rem", color: "#0d1b5e", marginBottom: 16 }}>
         Terms of Service
       </h1>
-      <p style={{ color: "#6b7280", marginBottom: 32 }}>
-        Last updated: May 2025
-      </p>
-
-      {/* PASTE YOUR TERMS SECTIONS HERE LIKE THIS: */}
-      <h2 style={{ color: "#0d1b5e", fontSize: "1.1rem", marginBottom: 8 }}>
-        1. Introduction
-      </h2>
       <p style={{ color: "#374151", lineHeight: 1.8, marginBottom: 24 }}>
-        YOUR TERMS TEXT GOES HERE...
+        Add your terms here...
       </p>
-
-      <h2 style={{ color: "#0d1b5e", fontSize: "1.1rem", marginBottom: 8 }}>
-        2. User Responsibilities
-      </h2>
-      <p style={{ color: "#374151", lineHeight: 1.8, marginBottom: 24 }}>
-        YOUR TERMS TEXT GOES HERE...
-      </p>
-
-      {/* ADD AS MANY SECTIONS AS YOU NEED */}
-
-      {/* PRIVACY POLICY SECTION */}
-      <h1 style={{
-        fontFamily: "'DM Serif Display', serif",
-        fontSize: "2rem", color: "#0d1b5e",
-        marginTop: 48, marginBottom: 8,
-      }}>
+      <h2 style={{ fontFamily: "'DM Serif Display',serif",
+        fontSize: "1.4rem", color: "#0d1b5e", marginBottom: 12 }}>
         Privacy Policy
-      </h1>
-      <p style={{ color: "#374151", lineHeight: 1.8, marginBottom: 24 }}>
-        YOUR PRIVACY POLICY TEXT GOES HERE...
+      </h2>
+      <p style={{ color: "#374151", lineHeight: 1.8 }}>
+        Add your privacy policy here...
       </p>
     </div>
   )

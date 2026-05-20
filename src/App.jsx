@@ -58,25 +58,33 @@ export default function App() {
   }, [])
 
   const navigateTo = (newPage) => {
-    window.location.hash = newPage
-    setPage(newPage)
+  setHistory(prev => [...prev, newPage])
+  window.location.hash = newPage
+  setPage(newPage)
+}
+
+// Track page history manually
+const [history, setHistory] = useState(['home'])
+
+const goBack = () => {
+  if (history.length > 1) {
+    const newHistory = history.slice(0, -1)
+    const previousPage = newHistory[newHistory.length - 1]
+    setHistory(newHistory)
+    setPage(previousPage)
+    window.location.hash = previousPage
   }
+}
 useEffect(() => {
-  const handleBack = (e) => {
-    e.preventDefault()
-    if (page === 'home') {
-      // Show exit warning
-      if (window.confirm("Press OK to exit Arleece")) {
-        window.history.back()
-      }
-    } else {
-      // Go back to previous page
-      window.history.back()
+  const handleBack = () => {
+    const hash = window.location.hash.replace('#', '') || 'home'
+    if (hash !== page) {
+      goBack()
     }
   }
   window.addEventListener('popstate', handleBack)
   return () => window.removeEventListener('popstate', handleBack)
-}, [page])
+}, [page, history])
 
   const logout = async () => {
     await supabase.auth.signOut()

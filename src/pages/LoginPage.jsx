@@ -156,9 +156,26 @@ export default function LoginPage({ setPage, setUser }) {
           </div>
 
           <div style={{ textAlign: "right", marginBottom: 18 }}>
-            <span style={{ fontSize: "0.78rem", color: "#1e3db5", cursor: "pointer" }}>
-              Forgot password?
-            </span>
+            <span
+  style={{ fontSize: "0.78rem", color: "#1e3db5", cursor: "pointer" }}
+  onClick={async () => {
+    if (!email) {
+      setErr("Enter your email address above first, then click Forgot password.")
+      return
+    }
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: 'https://arleese.vercel.app/#reset-password',
+    })
+    if (error) {
+      setErr(error.message)
+    } else {
+      setErr("")
+      alert("Password reset email sent! Check your inbox and follow the link to reset your password.")
+    }
+  }}
+>
+  Forgot password?
+</span>
           </div>
 
           <Btn full onClick={submit} disabled={loading}>

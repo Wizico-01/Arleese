@@ -141,9 +141,13 @@ export default function DashboardPage({ user, setPage }) {
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               {listings.map(l => (
-                <Card key={l.id} style={{ display: "flex", overflow: "hidden" }}>
-                  <img src={l.img} alt={l.title} style={{ width: 175, objectFit: "cover", flexShrink: 0 }} />
-                  <div style={{ padding: "16px 22px", flex: 1 }}>
+                <Card key={l.id} style={{ overflow: "hidden" }}>
+                   <img
+                      src={l.images?.[0] || l.img || ""}
+                      alt={l.title}
+                      style={{ width: "100%", height: 160, objectFit: "cover", display: "block" }}
+                      />
+                      <div style={{ padding: "14px 16px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
                       <div>
                         <div style={{ marginBottom: 5 }}>

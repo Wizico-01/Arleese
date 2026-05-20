@@ -22,7 +22,7 @@ export default function ListingModal({ listing: l, onClose, onUnlock, user, setP
       >
         {/* IMAGE */}
         <div style={{ position: "relative" }}>
-          <img src={l.images?.[0] || l.img || ""} alt={l.title}
+          <img id="main-listing-img" src={l.images?.[0] || l.img || ""} alt={l.title}
             style={{
               width: "100%", height: 250,
               objectFit: "cover",
@@ -110,14 +110,71 @@ export default function ListingModal({ listing: l, onClose, onUnlock, user, setP
     gridTemplateColumns: "repeat(3,1fr)",
     gap: 6, marginBottom: 14,
   }}>
-    {l.images.map((img, idx) => (
-      <img key={idx} src={img} alt=""
-        style={{ width:"100%", height:80, objectFit:"cover", borderRadius:8 }}
+    {/* PHOTO GALLERY */}
+{(l.images?.length > 0) && (
+  <div>
+    {/* MAIN IMAGE */}
+    <img
+      src={l.images[0]}
+      alt={l.title}
+      style={{
+        width: "100%", height: 250,
+        objectFit: "cover",
+        borderRadius: "18px 18px 0 0",
+        display: "block",
+      }}
+    />
+    {/* THUMBNAIL STRIP */}
+    {l.images.length > 1 && (
+      <div style={{
+        display: "flex", gap: 6,
+        padding: "8px 10px",
+        background: "#f4f3ef",
+        overflowX: "auto",
+      }}>
+        {l.images.map((img, idx) => (
+          <img
+            key={idx}
+            src={img}
+            alt=""
+            onClick={() => {
+              // Swap main image with tapped thumbnail
+              const el = document.getElementById('main-listing-img')
+              if (el) el.src = img
+            }}
+            style={{
+              width: 64, height: 52,
+              objectFit: "cover",
+              borderRadius: 8,
+              flexShrink: 0,
+              cursor: "pointer",
+              border: "2px solid transparent",
+            }}
+          />
+        ))}
+      </div>
+    )}
+  </div>
+)}
+  </div>
+)}
+{l.videos?.length > 0 && (
+  <div style={{ padding: "10px 16px", background: "#f4f3ef" }}>
+    {l.videos.map((vid, idx) => (
+      <video
+        key={idx}
+        src={vid}
+        controls
+        style={{
+          width: "100%",
+          borderRadius: 10,
+          marginBottom: 8,
+          maxHeight: 220,
+        }}
       />
     ))}
   </div>
 )}
-
 {/* VIDEOS */}
 {l.videos?.length > 0 && (
   <div style={{ marginBottom: 14 }}>
