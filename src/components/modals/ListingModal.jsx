@@ -1,7 +1,11 @@
+import { useState } from 'react'
 import { Ic, I } from '../Icons'
 import { Btn, Badge } from '../UI'
 
 export default function ListingModal({ listing: l, onClose, onUnlock, user, setPage }) {
+  const [mainImg, setMainImg] = useState(l.images?.[0] || l.img || "")
+  const [showFullImg, setShowFullImg] = useState(false)
+
   return (
     <div
       style={{
@@ -20,14 +24,54 @@ export default function ListingModal({ listing: l, onClose, onUnlock, user, setP
         }}
         onClick={e => e.stopPropagation()}
       >
-        {/* IMAGE */}
+
+        {/* FULL SCREEN IMAGE VIEWER */}
+        {showFullImg && (
+          <div
+            onClick={() => setShowFullImg(false)}
+            style={{
+              position: "fixed", inset: 0,
+              background: "rgba(0,0,0,.95)",
+              zIndex: 600, display: "flex",
+              alignItems: "center", justifyContent: "center",
+            }}
+          >
+            <img
+              src={mainImg}
+              alt=""
+              style={{
+                maxWidth: "100%", maxHeight: "100vh",
+                objectFit: "contain",
+              }}
+            />
+            <button
+              onClick={() => setShowFullImg(false)}
+              style={{
+                position: "absolute", top: 20, right: 20,
+                background: "rgba(255,255,255,.2)", border: "none",
+                color: "#fff", width: 40, height: 40,
+                borderRadius: "50%", fontSize: "1.2rem",
+                cursor: "pointer", display: "flex",
+                alignItems: "center", justifyContent: "center",
+              }}
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        {/* MAIN IMAGE */}
         <div style={{ position: "relative" }}>
-          <img id="main-listing-img" src={l.images?.[0] || l.img || ""} alt={l.title}
+          <img
+            src={mainImg}
+            alt={l.title}
+            onClick={() => setShowFullImg(true)}
             style={{
               width: "100%", height: 250,
               objectFit: "cover",
               borderRadius: "18px 18px 0 0",
               display: "block",
+              cursor: "pointer",
             }}
           />
           <button
@@ -50,6 +94,58 @@ export default function ListingModal({ listing: l, onClose, onUnlock, user, setP
             </div>
           )}
         </div>
+
+        {/* THUMBNAIL STRIP */}
+        {l.images?.length > 1 && (
+          <div style={{
+            display: "flex", gap: 6,
+            padding: "8px 12px",
+            background: "#f4f3ef",
+            overflowX: "auto",
+          }}>
+            {l.images.map((img, idx) => (
+              <img
+                key={idx}
+                src={img}
+                alt=""
+                onClick={() => setMainImg(img)}
+                style={{
+                  width: 64, height: 52,
+                  objectFit: "cover",
+                  borderRadius: 8,
+                  flexShrink: 0,
+                  cursor: "pointer",
+                  border: `2px solid ${mainImg === img ? "#0d1b5e" : "transparent"}`,
+                  transition: "border .2s",
+                }}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* VIDEOS */}
+        {l.videos?.length > 0 && (
+          <div style={{ padding: "10px 16px", background: "#f4f3ef" }}>
+            <p style={{
+              fontSize: "0.78rem", fontWeight: 600,
+              color: "#374151", marginBottom: 8,
+            }}>
+              Videos
+            </p>
+            {l.videos.map((vid, idx) => (
+              <video
+                key={idx}
+                src={vid}
+                controls
+                style={{
+                  width: "100%", borderRadius: 10,
+                  marginBottom: 8, maxHeight: 220,
+                  display: "block",
+                }}
+              />
+            ))}
+          </div>
+        )}
 
         {/* CONTENT */}
         <div style={{ padding: "22px 26px 28px" }}>
@@ -74,7 +170,7 @@ export default function ListingModal({ listing: l, onClose, onUnlock, user, setP
             </div>
             <div>
               <div style={{ fontWeight: 700, color: "#0d1b5e", fontSize: "1.35rem" }}>
-                ₦{l.price.toLocaleString()}
+                ₦{l.price?.toLocaleString()}
               </div>
               <div style={{ fontSize: "0.7rem", color: "#9ca3af", textAlign: "right" }}>
                 per year
@@ -82,134 +178,48 @@ export default function ListingModal({ listing: l, onClose, onUnlock, user, setP
             </div>
           </div>
 
-          {/* STATS */}
+          {/* STATS PILLS */}
           <div style={{
             display: "flex", gap: 10, flexWrap: "wrap",
             paddingBottom: 14, borderBottom: "1px solid #f0efea", marginBottom: 16,
           }}>
             {[
-              { d: null, v: `${l.kitchs || 0} Kitchen` },
-              { d: null, v: `${l.baths || 0} Bathroom${l.baths > 1 ? "s" : ""}` },
-              { d: null, v: l.size },
-              { d: null, v: l.type },
-            ].map(({ d, v }) => (
+              `${l.kitchs || 0} Kitchen`,
+              `${l.baths || 0} Bathroom${l.baths > 1 ? "s" : ""}`,
+              l.type,
+            ].filter(Boolean).map(v => (
               <div key={v} style={{
-                display: "flex", alignItems: "center", gap: 5,
                 background: "#f4f3ef", borderRadius: 8,
                 padding: "6px 12px", fontSize: "0.82rem", color: "#374151",
               }}>
-                {d && <Ic d={d} s={13} />} {v}
+                {v}
               </div>
             ))}
           </div>
-  
-{/* PHOTO GALLERY */}
-{l.images?.length > 0 && (
-  <div style={{
-    display: "grid",
-    gridTemplateColumns: "repeat(3,1fr)",
-    gap: 6, marginBottom: 14,
-  }}>
-    {/* PHOTO GALLERY */}
-{(l.images?.length > 0) && (
-  <div>
-    {/* MAIN IMAGE */}
-    <img
-      src={l.images[0]}
-      alt={l.title}
-      style={{
-        width: "100%", height: 250,
-        objectFit: "cover",
-        borderRadius: "18px 18px 0 0",
-        display: "block",
-      }}
-    />
-    {/* THUMBNAIL STRIP */}
-    {l.images.length > 1 && (
-      <div style={{
-        display: "flex", gap: 6,
-        padding: "8px 10px",
-        background: "#f4f3ef",
-        overflowX: "auto",
-      }}>
-        {l.images.map((img, idx) => (
-          <img
-            key={idx}
-            src={img}
-            alt=""
-            onClick={() => {
-              // Swap main image with tapped thumbnail
-              const el = document.getElementById('main-listing-img')
-              if (el) el.src = img
-            }}
-            style={{
-              width: 64, height: 52,
-              objectFit: "cover",
-              borderRadius: 8,
-              flexShrink: 0,
-              cursor: "pointer",
-              border: "2px solid transparent",
-            }}
-          />
-        ))}
-      </div>
-    )}
-  </div>
-)}
-  </div>
-)}
-{l.videos?.length > 0 && (
-  <div style={{ padding: "10px 16px", background: "#f4f3ef" }}>
-    {l.videos.map((vid, idx) => (
-      <video
-        key={idx}
-        src={vid}
-        controls
-        style={{
-          width: "100%",
-          borderRadius: 10,
-          marginBottom: 8,
-          maxHeight: 220,
-        }}
-      />
-    ))}
-  </div>
-)}
-{/* VIDEOS */}
-{l.videos?.length > 0 && (
-  <div style={{ marginBottom: 14 }}>
-    <p style={{ fontSize:"0.78rem", fontWeight:600, color:"#374151", marginBottom:8 }}>
-      Videos
-    </p>
-    {l.videos.map((vid, idx) => (
-      <video key={idx} src={vid} controls
-        style={{ width:"100%", borderRadius:10, marginBottom:8, maxHeight:200 }}
-      />
-    ))}
-  </div>
-)}
 
           {/* AMENITIES */}
-          <div style={{ marginBottom: 18 }}>
-            <h4 style={{
-              fontWeight: 700, color: "#374151",
-              fontSize: "0.8rem", letterSpacing: "0.05em", marginBottom: 9,
-            }}>
-              AMENITIES
-            </h4>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-              {l.amenities.map(a => (
-                <span key={a} style={{
-                  display: "flex", alignItems: "center", gap: 4,
-                  background: "#eef2ff", color: "#0d1b5e",
-                  borderRadius: 6, padding: "4px 11px",
-                  fontSize: "0.76rem", fontWeight: 600,
-                }}>
-                  <Ic d={I.check} s={11} sw={2.5} /> {a}
-                </span>
-              ))}
+          {l.amenities?.length > 0 && (
+            <div style={{ marginBottom: 18 }}>
+              <h4 style={{
+                fontWeight: 700, color: "#374151",
+                fontSize: "0.8rem", letterSpacing: "0.05em", marginBottom: 9,
+              }}>
+                AMENITIES
+              </h4>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                {l.amenities.map(a => (
+                  <span key={a} style={{
+                    display: "flex", alignItems: "center", gap: 4,
+                    background: "#eef2ff", color: "#0d1b5e",
+                    borderRadius: 6, padding: "4px 11px",
+                    fontSize: "0.76rem", fontWeight: 600,
+                  }}>
+                    <Ic d={I.check} s={11} sw={2.5} /> {a}
+                  </span>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* UNLOCK BANNER */}
           <div style={{
@@ -222,7 +232,10 @@ export default function ListingModal({ listing: l, onClose, onUnlock, user, setP
               alignItems: "center", flexWrap: "wrap", gap: 12,
             }}>
               <div>
-                <div style={{ fontWeight: 700, color: "#0d1b5e", fontSize: "0.96rem", marginBottom: 3 }}>
+                <div style={{
+                  fontWeight: 700, color: "#0d1b5e",
+                  fontSize: "0.96rem", marginBottom: 3,
+                }}>
                   Get Direct Landlord Contact
                 </div>
                 <div style={{ color: "#6b7280", fontSize: "0.79rem" }}>

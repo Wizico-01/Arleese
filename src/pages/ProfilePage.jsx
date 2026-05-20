@@ -6,47 +6,53 @@ import { Ic, I } from '../components/Icons'
 export default function ProfilePage({ user, setPage, logout }) {
   const [unlocks, setUnlocks] = useState([])
   const [listings, setListings] = useState([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!user) return
+    if (!user) { setLoading(false); return }
 
-    if (user.role === 'tenant') {
-      // Fetch tenant's unlocked contacts
-      const { data, error } = await supabase
-  .from('unlocks')
-  .select(`
-    id,
-    amount,
-    payment_method,
-    paid_at,
-    listing_id,
-    listings (
-      id,
-      title,
-      area,
-      state,
-      price,
-      images
-    )
-  `)
-  .eq('tenant_id', user.id)
-  .order('paid_at', { ascending: false })
+    const fetchData = async () => {
+      setLoading(true)
+      try {
+        if (user.role === 'tenant') {
+          const { data, error } = await supabase
+            .from('unlocks')
+            .select(`
+              id,
+              amount,
+              payment_method,
+              paid_at,
+              listing_id,
+              listings (
+                id, title, area, state, price, images
+              )
+            `)
+            .eq('tenant_id', user.id)
+            .order('paid_at', { ascending: false })
 
-if (data) setUnlocks(data)
-if (error) console.log('Unlocks error:', error)
+          if (error) console.log('Unlocks fetch error:', error)
+          if (data) setUnlocks(data)
+        }
+
+        if (user.role === 'landlord') {
+          const { data, error } = await supabase
+            .from('listings')
+            .select('*')
+            .eq('landlord_id', user.id)
+            .order('created_at', { ascending: false })
+
+          if (error) console.log('Listings fetch error:', error)
+          if (data) setListings(data)
+        }
+      } catch (e) {
+        console.log('Profile fetch error:', e)
+      }
+      setLoading(false)
     }
 
-    if (user.role === 'landlord') {
-      // Fetch landlord's listed properties
-      supabase
-        .from('listings')
-        .select('*')
-        .eq('landlord_id', user.id)
-        .then(({ data }) => { if (data) setListings(data) })
-    }
+    fetchData()
   }, [user])
 
-  // NOT LOGGED IN
   if (!user) return (
     <div style={{
       minHeight: "100vh", background: "#f4f3ef",
@@ -64,47 +70,32 @@ if (error) console.log('Unlocks error:', error)
       <p style={{ color: "#6b7280", fontSize: "0.87rem", textAlign: "center" }}>
         Create an account or sign in to view your profile
       </p>
-      <button
-        onClick={() => setPage('login')}
-        style={{
-          background: "#0d1b5e", color: "#fff",
-          border: "none", borderRadius: 9,
-          padding: "12px 32px", cursor: "pointer",
-          fontSize: "0.9rem", fontWeight: 600,
-          fontFamily: "inherit",
-        }}
-      >
+      <button onClick={() => setPage('login')} style={{
+        background: "#0d1b5e", color: "#fff", border: "none",
+        borderRadius: 9, padding: "12px 32px", cursor: "pointer",
+        fontSize: "0.9rem", fontWeight: 600, fontFamily: "inherit",
+      }}>
         Sign In
       </button>
-      <button
-        onClick={() => setPage('register')}
-        style={{
-          background: "none", color: "#0d1b5e",
-          border: "1.5px solid #0d1b5e", borderRadius: 9,
-          padding: "12px 32px", cursor: "pointer",
-          fontSize: "0.9rem", fontWeight: 600,
-          fontFamily: "inherit",
-        }}
-      >
+      <button onClick={() => setPage('register')} style={{
+        background: "none", color: "#0d1b5e",
+        border: "1.5px solid #0d1b5e", borderRadius: 9,
+        padding: "12px 32px", cursor: "pointer",
+        fontSize: "0.9rem", fontWeight: 600, fontFamily: "inherit",
+      }}>
         Create Account
       </button>
     </div>
   )
 
   return (
-    <div style={{
-      background: "#f4f3ef",
-      minHeight: "100vh",
-      paddingBottom: 80,
-    }}>
+    <div style={{ background: "#f4f3ef", minHeight: "100vh", paddingBottom: 80 }}>
 
       {/* HEADER */}
       <div style={{
         background: "linear-gradient(135deg,#060e33,#0d1b5e)",
-        padding: "40px 20px 30px",
-        textAlign: "center",
+        padding: "40px 20px 30px", textAlign: "center",
       }}>
-        {/* AVATAR */}
         <div style={{
           width: 72, height: 72, borderRadius: "50%",
           background: "#fff", color: "#0d1b5e",
@@ -114,10 +105,7 @@ if (error) console.log('Unlocks error:', error)
         }}>
           {user.name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase()}
         </div>
-        <h2 style={{
-          color: "#fff", fontSize: "1.2rem",
-          fontWeight: 700, marginBottom: 4,
-        }}>
+        <h2 style={{ color: "#fff", fontSize: "1.2rem", fontWeight: 700, marginBottom: 4 }}>
           {user.name || "User"}
         </h2>
         <p style={{ color: "rgba(255,255,255,.6)", fontSize: "0.82rem" }}>
@@ -135,8 +123,14 @@ if (error) console.log('Unlocks error:', error)
 
       <div style={{ padding: "20px 16px" }}>
 
-        {/* ── TENANT VIEW ── */}
-        {user.role === 'tenant' && (
+        {loading && (
+          <div style={{ textAlign: "center", padding: "32px 0", color: "#9ca3af" }}>
+            Loading...
+          </div>
+        )}
+
+        {/* TENANT VIEW */}
+        {!loading && user.role === 'tenant' && (
           <div>
             <h3 style={{
               fontWeight: 700, color: "#0d1b5e",
@@ -147,43 +141,76 @@ if (error) console.log('Unlocks error:', error)
 
             {unlocks.length === 0 ? (
               <Card style={{ padding: 28, textAlign: "center" }}>
-                <div style={{ fontSize: "2rem", marginBottom: 10 }}>🔍</div>
-                <p style={{ color: "#6b7280", fontSize: "0.85rem" }}>
+                <div style={{ fontSize: "2rem", marginBottom: 10 }}>🔒</div>
+                <p style={{ color: "#6b7280", fontSize: "0.85rem", marginBottom: 16 }}>
                   You have not unlocked any landlord contacts yet.
                 </p>
-                <button
-                  onClick={() => setPage('browse')}
-                  style={{
-                    marginTop: 16, background: "#0d1b5e",
-                    color: "#fff", border: "none", borderRadius: 8,
-                    padding: "10px 20px", cursor: "pointer",
-                    fontSize: "0.85rem", fontWeight: 600,
-                    fontFamily: "inherit",
-                  }}
-                >
+                <button onClick={() => setPage('browse')} style={{
+                  background: "#0d1b5e", color: "#fff", border: "none",
+                  borderRadius: 8, padding: "10px 20px", cursor: "pointer",
+                  fontSize: "0.85rem", fontWeight: 600, fontFamily: "inherit",
+                }}>
                   Browse Apartments
                 </button>
               </Card>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {unlocks.map(u => (
-                  <Card key={u.id} style={{ padding: "14px 16px" }}>
-                    <h4 style={{
-                      fontFamily: "'DM Serif Display',serif",
-                      color: "#0d1b5e", fontSize: "0.95rem", marginBottom: 4,
-                    }}>
-                      {u.listings?.title || "Apartment"}
-                    </h4>
-                    <p style={{ color: "#6b7280", fontSize: "0.78rem", marginBottom: 8 }}>
-                      📍 {u.listings?.area}, {u.listings?.state}
-                    </p>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <Badge color="#166534" bg="#dcfce7">
-                        ✅ Paid ₦{u.amount?.toLocaleString()}
-                      </Badge>
-                      <span style={{ fontSize: "0.72rem", color: "#9ca3af" }}>
-                        {new Date(u.paid_at).toLocaleDateString('en-NG')}
-                      </span>
+                  <Card key={u.id} style={{ overflow: "hidden" }}>
+                    {u.listings?.images?.[0] && (
+                      <img
+                        src={u.listings.images[0]}
+                        alt={u.listings?.title}
+                        style={{ width: "100%", height: 130, objectFit: "cover", display: "block" }}
+                      />
+                    )}
+                    <div style={{ padding: "12px 14px" }}>
+                      <h4 style={{
+                        fontFamily: "'DM Serif Display',serif",
+                        color: "#0d1b5e", fontSize: "0.95rem", marginBottom: 4,
+                      }}>
+                        {u.listings?.title || "Apartment"}
+                      </h4>
+                      <p style={{ color: "#6b7280", fontSize: "0.78rem", marginBottom: 10 }}>
+                        📍 {u.listings?.area}, {u.listings?.state}
+                      </p>
+
+                      {/* LANDLORD CONTACT DETAILS */}
+                      <div style={{
+                        background: "#f0f7ff",
+                        borderRadius: 10, padding: "12px 14px",
+                        marginBottom: 10,
+                      }}>
+                        <p style={{
+                          fontSize: "0.7rem", fontWeight: 700,
+                          color: "#9ca3af", letterSpacing: "0.06em",
+                          marginBottom: 8,
+                        }}>
+                          LANDLORD CONTACT
+                        </p>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                          <span style={{ fontSize: "0.86rem", color: "#0d1b5e", fontWeight: 600 }}>
+                            📞 {u.landlord_phone || "Contact saved — check your email"}
+                          </span>
+                          <span style={{ fontSize: "0.86rem", color: "#0d1b5e" }}>
+                            📍 {u.listings?.area}, {u.listings?.state}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div style={{
+                        display: "flex", justifyContent: "space-between",
+                        alignItems: "center",
+                      }}>
+                        <Badge color="#166534" bg="#dcfce7">
+                          ✅ Paid ₦{u.amount?.toLocaleString()}
+                        </Badge>
+                        <span style={{ fontSize: "0.72rem", color: "#9ca3af" }}>
+                          {new Date(u.paid_at).toLocaleDateString('en-NG', {
+                            day: 'numeric', month: 'short', year: 'numeric'
+                          })}
+                        </span>
+                      </div>
                     </div>
                   </Card>
                 ))}
@@ -192,15 +219,11 @@ if (error) console.log('Unlocks error:', error)
           </div>
         )}
 
-        {/* ── LANDLORD VIEW ── */}
-        {user.role === 'landlord' && (
+        {/* LANDLORD VIEW */}
+        {!loading && user.role === 'landlord' && (
           <div>
-            {/* VERIFICATION STATUS */}
             <Card style={{ padding: "14px 16px", marginBottom: 16 }}>
-              <div style={{
-                display: "flex", justifyContent: "space-between",
-                alignItems: "center",
-              }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "#374151" }}>
                   Verification Status
                 </span>
@@ -223,19 +246,14 @@ if (error) console.log('Unlocks error:', error)
             {listings.length === 0 ? (
               <Card style={{ padding: 28, textAlign: "center" }}>
                 <div style={{ fontSize: "2rem", marginBottom: 10 }}>🏠</div>
-                <p style={{ color: "#6b7280", fontSize: "0.85rem" }}>
+                <p style={{ color: "#6b7280", fontSize: "0.85rem", marginBottom: 16 }}>
                   You have not listed any properties yet.
                 </p>
-                <button
-                  onClick={() => setPage('dashboard')}
-                  style={{
-                    marginTop: 16, background: "#0d1b5e",
-                    color: "#fff", border: "none", borderRadius: 8,
-                    padding: "10px 20px", cursor: "pointer",
-                    fontSize: "0.85rem", fontWeight: 600,
-                    fontFamily: "inherit",
-                  }}
-                >
+                <button onClick={() => setPage('dashboard')} style={{
+                  background: "#0d1b5e", color: "#fff", border: "none",
+                  borderRadius: 8, padding: "10px 20px", cursor: "pointer",
+                  fontSize: "0.85rem", fontWeight: 600, fontFamily: "inherit",
+                }}>
                   Go to Dashboard
                 </button>
               </Card>
@@ -247,10 +265,7 @@ if (error) console.log('Unlocks error:', error)
                       <img
                         src={l.images[0]}
                         alt={l.title}
-                        style={{
-                          width: "100%", height: 140,
-                          objectFit: "cover", display: "block",
-                        }}
+                        style={{ width: "100%", height: 140, objectFit: "cover", display: "block" }}
                       />
                     )}
                     <div style={{ padding: "12px 14px" }}>
@@ -260,18 +275,11 @@ if (error) console.log('Unlocks error:', error)
                       }}>
                         {l.title}
                       </h4>
-                      <p style={{
-                        color: "#6b7280", fontSize: "0.78rem", marginBottom: 8,
-                      }}>
+                      <p style={{ color: "#6b7280", fontSize: "0.78rem", marginBottom: 8 }}>
                         📍 {l.area}, {l.state}
                       </p>
-                      <div style={{
-                        display: "flex", justifyContent: "space-between",
-                        alignItems: "center",
-                      }}>
-                        <span style={{
-                          fontWeight: 700, color: "#0d1b5e", fontSize: "0.9rem",
-                        }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span style={{ fontWeight: 700, color: "#0d1b5e", fontSize: "0.9rem" }}>
                           ₦{l.price?.toLocaleString()}/yr
                         </span>
                         <Badge
@@ -289,7 +297,7 @@ if (error) console.log('Unlocks error:', error)
           </div>
         )}
 
-        {/* SIGN OUT BUTTON — both landlord and tenant */}
+        {/* SIGN OUT */}
         <button
           onClick={logout}
           style={{

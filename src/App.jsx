@@ -10,14 +10,16 @@ import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import DashboardPage from './pages/DashboardPage'
 import ProfilePage from './pages/ProfilePage'
+import ResetPasswordPage from './pages/ResetPasswordPage'
 
 export default function App() {
   const [page, setPage] = useState(
     window.location.hash.replace('#', '') || 'home'
   )
   const [user, setUser] = useState(null)
+  const [pageHistory, setPageHistory] = useState(['home'])
 
-  // useEffect #1 — auth session + auth state listener
+  // Auth session check
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
@@ -41,73 +43,59 @@ export default function App() {
     })
 
     supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) {
-        setUser(null)
-      }
+      if (!session) setUser(null)
     })
   }, [])
 
-  // useEffect #2 — hash-based back navigation (separate, top-level)
+  // Handle browser back button / swipe back
   useEffect(() => {
-    const handleBack = () => {
-      const hash = window.location.hash.replace('#', '') || 'home'
-      setPage(hash)
+    const handlePop = () => {
+      setPageHistory(prev => {
+        if (prev.length > 1) {
+          const newHistory = prev.slice(0, -1)
+          const prevPage = newHistory[newHistory.length - 1]
+          setPage(prevPage)
+          window.location.hash = prevPage
+          return newHistory
+        }
+        return prev
+      })
     }
-    window.addEventListener('hashchange', handleBack)
-    return () => window.removeEventListener('hashchange', handleBack)
+    window.addEventListener('popstate', handlePop)
+    return () => window.removeEventListener('popstate', handlePop)
   }, [])
 
   const navigateTo = (newPage) => {
-  setHistory(prev => [...prev, newPage])
-  window.location.hash = newPage
-  setPage(newPage)
-}
-
-// Track page history manually
-const [history, setHistory] = useState(['home'])
-
-const goBack = () => {
-  if (history.length > 1) {
-    const newHistory = history.slice(0, -1)
-    const previousPage = newHistory[newHistory.length - 1]
-    setHistory(newHistory)
-    setPage(previousPage)
-    window.location.hash = previousPage
+    window.history.pushState({}, '', `#${newPage}`)
+    setPageHistory(prev => [...prev, newPage])
+    setPage(newPage)
   }
-}
-useEffect(() => {
-  const handleBack = () => {
-    const hash = window.location.hash.replace('#', '') || 'home'
-    if (hash !== page) {
-      goBack()
-    }
-  }
-  window.addEventListener('popstate', handleBack)
-  return () => window.removeEventListener('popstate', handleBack)
-}, [page, history])
 
   const logout = async () => {
     await supabase.auth.signOut()
     setUser(null)
-    navigateTo('home')
+    setPageHistory(['home'])
+    setPage('home')
+    window.location.hash = 'home'
   }
 
   const renderPage = () => {
     switch (page) {
-      case 'login':     return <LoginPage setPage={setPage} setUser={setUser} />
-      case 'register':  return <RegisterPage setPage={setPage} setUser={setUser} />
-      case 'browse':    return <BrowsePage user={user} setPage={setPage} />
-      case 'dashboard': return <DashboardPage user={user} setPage={setPage} />
-      case 'saved':     return <TenantDashboard user={user} setPage={setPage} />
-      case 'terms':     return <TermsPage setPage={setPage} />
-      case 'profile':   return <ProfilePage user={user} setPage={setPage} logout={logout} />
-      case 'register-landlord': return <RegisterPage setPage={setPage} setUser={setUser} defaultRole="landlord" />
-      default:          return <HomePage setPage={setPage} user={user} />
+      case 'login':             return <LoginPage setPage={navigateTo} setUser={setUser} />
+      case 'register':          return <RegisterPage setPage={navigateTo} setUser={setUser} />
+      case 'register-landlord': return <RegisterPage setPage={navigateTo} setUser={setUser} defaultRole="landlord" />
+      case 'browse':            return <BrowsePage user={user} setPage={navigateTo} />
+      case 'dashboard':         return <DashboardPage user={user} setPage={navigateTo} />
+      case 'saved':             return <TenantDashboard user={user} setPage={navigateTo} />
+      case 'terms':             return <TermsPage setPage={navigateTo} />
+      case 'profile':           return <ProfilePage user={user} setPage={navigateTo} logout={logout} />
+      case 'reset-password':    return <ResetPasswordPage setPage={navigateTo} />
+      default:                  return <HomePage setPage={navigateTo} user={user} />
     }
   }
 
-  const hideNav    = ['login', 'register'].includes(page)
-  const hideBottom = ['login', 'register'].includes(page)
+  const hideNav    = ['login', 'register', 'register-landlord'].includes(page)
+  const hideBottom = ['login', 'register', 'register-landlord'].includes(page)
 
   return (
     <div style={{
@@ -117,20 +105,11 @@ useEffect(() => {
       paddingBottom: hideBottom ? 0 : 65,
     }}>
       {!hideNav && (
-        <Navbar
-          user={user}
-          setPage={setPage}
-          logout={logout}
-          page={page}
-        />
+        <Navbar user={user} setPage={navigateTo} logout={logout} page={page} />
       )}
       {renderPage()}
       {!hideBottom && (
-        <BottomNav
-          page={page}
-          setPage={setPage}
-          user={user}
-        />
+        <BottomNav page={page} setPage={navigateTo} user={user} />
       )}
     </div>
   )
