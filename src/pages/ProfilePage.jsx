@@ -9,11 +9,13 @@ export default function ProfilePage({ user, setPage, logout }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!user) { setLoading(false); return }
-
+    // FIXED: Wrapped the asynchronous queries inside an explicit, valid inner async function block
     const fetchData = async () => {
+      if (!user) return
+      
       setLoading(true)
       try {
+        // TENANT FETCH ROUTE
         if (user.role === 'tenant') {
           const { data, error } = await supabase
             .from('unlocks')
@@ -24,16 +26,27 @@ export default function ProfilePage({ user, setPage, logout }) {
               paid_at,
               listing_id,
               listings (
-                id, title, area, state, price, images
+                id,
+                title,
+                area,
+                state,
+                price,
+                images
               )
             `)
             .eq('tenant_id', user.id)
             .order('paid_at', { ascending: false })
 
-          if (error) console.log('Unlocks fetch error:', error)
-          if (data) setUnlocks(data)
+          if (error) {
+            console.log('Unlocks error:', JSON.stringify(error))
+          }
+          if (data) {
+            console.log('Unlocks found:', data.length)
+            setUnlocks(data)
+          }
         }
 
+        // LANDLORD FETCH ROUTE
         if (user.role === 'landlord') {
           const { data, error } = await supabase
             .from('listings')
@@ -46,13 +59,15 @@ export default function ProfilePage({ user, setPage, logout }) {
         }
       } catch (e) {
         console.log('Profile fetch error:', e)
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     }
 
     fetchData()
   }, [user])
 
+  // AUTHENTICATION GUARD LOOKUP
   if (!user) return (
     <div style={{
       minHeight: "100vh", background: "#f4f3ef",
@@ -60,9 +75,12 @@ export default function ProfilePage({ user, setPage, logout }) {
       justifyContent: "center", padding: 24,
       flexDirection: "column", gap: 16,
     }}>
-      <div style={{ fontSize: "3rem" }}>👤</div>
+      {/* CUSTOMIZED: Swapped user silhouette emoji with brand vector icon */}
+      <div style={{ color: "#0d1b5e", marginBottom: 8 }}>
+        <Ic d={I.user} s={44} />
+      </div>
       <h2 style={{
-        fontFamily: "'DM Serif Display',serif",
+        fontFamily: "'DM Serif Display', serif",
         color: "#0d1b5e", fontSize: "1.5rem",
       }}>
         You are not logged in
@@ -91,7 +109,7 @@ export default function ProfilePage({ user, setPage, logout }) {
   return (
     <div style={{ background: "#f4f3ef", minHeight: "100vh", paddingBottom: 80 }}>
 
-      {/* HEADER */}
+      {/* HERO BANNER SECTION */}
       <div style={{
         background: "linear-gradient(135deg,#060e33,#0d1b5e)",
         padding: "40px 20px 30px", textAlign: "center",
@@ -111,12 +129,13 @@ export default function ProfilePage({ user, setPage, logout }) {
         <p style={{ color: "rgba(255,255,255,.6)", fontSize: "0.82rem" }}>
           {user.email}
         </p>
-        <div style={{ marginTop: 10 }}>
+        <div style={{ marginTop: 10, display: "flex", justifyContent: "center" }}>
           <Badge
             color={user.role === 'landlord' ? "#fde047" : "#7eb3ff"}
             bg="rgba(255,255,255,.1)"
           >
-            {user.role === 'landlord' ? '🏠 Landlord' : '🔍 Tenant'}
+            {/* CUSTOMIZED: Clean typography styling layout matches */}
+            {user.role === 'landlord' ? 'Landlord' : 'Tenant'}
           </Badge>
         </div>
       </div>
@@ -124,12 +143,12 @@ export default function ProfilePage({ user, setPage, logout }) {
       <div style={{ padding: "20px 16px" }}>
 
         {loading && (
-          <div style={{ textAlign: "center", padding: "32px 0", color: "#9ca3af" }}>
-            Loading...
+          <div style={{ textAlign: "center", padding: "32px 0", color: "#9ca3af", fontSize: "0.88rem" }}>
+            Loading metrics...
           </div>
         )}
 
-        {/* TENANT VIEW */}
+        {/* TENANT VIEW PORTAL */}
         {!loading && user.role === 'tenant' && (
           <div>
             <h3 style={{
@@ -141,7 +160,10 @@ export default function ProfilePage({ user, setPage, logout }) {
 
             {unlocks.length === 0 ? (
               <Card style={{ padding: 28, textAlign: "center" }}>
-                <div style={{ fontSize: "2rem", marginBottom: 10 }}>🔒</div>
+                {/* CUSTOMIZED: Swapped padlock emoji with clean layout lock vector */}
+                <div style={{ color: "#9ca3af", marginBottom: 12, display: "flex", justifyContent: "center" }}>
+                  <Ic d={I.lock} s={32} />
+                </div>
                 <p style={{ color: "#6b7280", fontSize: "0.85rem", marginBottom: 16 }}>
                   You have not unlocked any landlord contacts yet.
                 </p>
@@ -166,16 +188,16 @@ export default function ProfilePage({ user, setPage, logout }) {
                     )}
                     <div style={{ padding: "12px 14px" }}>
                       <h4 style={{
-                        fontFamily: "'DM Serif Display',serif",
+                        fontFamily: "'DM Serif Display', serif",
                         color: "#0d1b5e", fontSize: "0.95rem", marginBottom: 4,
                       }}>
                         {u.listings?.title || "Apartment"}
                       </h4>
-                      <p style={{ color: "#6b7280", fontSize: "0.78rem", marginBottom: 10 }}>
-                        📍 {u.listings?.area}, {u.listings?.state}
+                      <p style={{ color: "#6b7280", fontSize: "0.78rem", marginBottom: 10, display: "flex", alignItems: "center", gap: 4 }}>
+                        <Ic d={I.pin} s={12} /> {u.listings?.area}, {u.listings?.state}
                       </p>
 
-                      {/* LANDLORD CONTACT DETAILS */}
+                      {/* LANDLORD CONTACT BOX */}
                       <div style={{
                         background: "#f0f7ff",
                         borderRadius: 10, padding: "12px 14px",
@@ -189,21 +211,18 @@ export default function ProfilePage({ user, setPage, logout }) {
                           LANDLORD CONTACT
                         </p>
                         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                          <span style={{ fontSize: "0.86rem", color: "#0d1b5e", fontWeight: 600 }}>
-                            📞 {u.landlord_phone || "Contact saved — check your email"}
+                          <span style={{ fontSize: "0.86rem", color: "#0d1b5e", fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
+                            <Ic d={I.mail} s={12} /> {u.landlord_phone || "Contact saved — check your email"}
                           </span>
-                          <span style={{ fontSize: "0.86rem", color: "#0d1b5e" }}>
-                            📍 {u.listings?.area}, {u.listings?.state}
+                          <span style={{ fontSize: "0.86rem", color: "#0d1b5e", display: "flex", alignItems: "center", gap: 6 }}>
+                            <Ic d={I.pin} s={12} /> {u.listings?.area}, {u.listings?.state}
                           </span>
                         </div>
                       </div>
 
-                      <div style={{
-                        display: "flex", justifyContent: "space-between",
-                        alignItems: "center",
-                      }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <Badge color="#166534" bg="#dcfce7">
-                          ✅ Paid ₦{u.amount?.toLocaleString()}
+                          Paid ₦{u.amount?.toLocaleString()}
                         </Badge>
                         <span style={{ fontSize: "0.72rem", color: "#9ca3af" }}>
                           {new Date(u.paid_at).toLocaleDateString('en-NG', {
@@ -219,7 +238,7 @@ export default function ProfilePage({ user, setPage, logout }) {
           </div>
         )}
 
-        {/* LANDLORD VIEW */}
+        {/* LANDLORD VIEW PORTAL */}
         {!loading && user.role === 'landlord' && (
           <div>
             <Card style={{ padding: "14px 16px", marginBottom: 16 }}>
@@ -231,7 +250,7 @@ export default function ProfilePage({ user, setPage, logout }) {
                   color={user.verified ? "#166534" : "#92400e"}
                   bg={user.verified ? "#dcfce7" : "#fef3c7"}
                 >
-                  {user.verified ? "✅ Verified" : "⏳ Pending"}
+                  {user.verified ? "Verified" : "Pending"}
                 </Badge>
               </div>
             </Card>
@@ -245,7 +264,10 @@ export default function ProfilePage({ user, setPage, logout }) {
 
             {listings.length === 0 ? (
               <Card style={{ padding: 28, textAlign: "center" }}>
-                <div style={{ fontSize: "2rem", marginBottom: 10 }}>🏠</div>
+                {/* CUSTOMIZED: Swapped house emoji with vector system icon */}
+                <div style={{ color: "#9ca3af", marginBottom: 12, display: "flex", justifyContent: "center" }}>
+                  <Ic d={I.home} s={32} />
+                </div>
                 <p style={{ color: "#6b7280", fontSize: "0.85rem", marginBottom: 16 }}>
                   You have not listed any properties yet.
                 </p>
@@ -270,13 +292,13 @@ export default function ProfilePage({ user, setPage, logout }) {
                     )}
                     <div style={{ padding: "12px 14px" }}>
                       <h4 style={{
-                        fontFamily: "'DM Serif Display',serif",
+                        fontFamily: "'DM Serif Display', serif",
                         color: "#0d1b5e", fontSize: "0.95rem", marginBottom: 4,
                       }}>
                         {l.title}
                       </h4>
-                      <p style={{ color: "#6b7280", fontSize: "0.78rem", marginBottom: 8 }}>
-                        📍 {l.area}, {l.state}
+                      <p style={{ color: "#6b7280", fontSize: "0.78rem", marginBottom: 8, display: "flex", alignItems: "center", gap: 4 }}>
+                        <Ic d={I.pin} s={12} /> {l.area}, {l.state}
                       </p>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <span style={{ fontWeight: 700, color: "#0d1b5e", fontSize: "0.9rem" }}>
@@ -286,7 +308,7 @@ export default function ProfilePage({ user, setPage, logout }) {
                           color={l.status === 'active' ? "#166534" : "#92400e"}
                           bg={l.status === 'active' ? "#dcfce7" : "#fef3c7"}
                         >
-                          {l.status === 'active' ? '● Active' : '🔑 Rented'}
+                          {l.status === 'active' ? 'Active' : 'Rented'}
                         </Badge>
                       </div>
                     </div>
@@ -297,7 +319,7 @@ export default function ProfilePage({ user, setPage, logout }) {
           </div>
         )}
 
-        {/* SIGN OUT */}
+        {/* LOGOUT INTERACTION ELEMENT */}
         <button
           onClick={logout}
           style={{

@@ -21,31 +21,43 @@ export default function App() {
 
   // Auth session check
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single()
-          .then(({ data: profile }) => {
-            if (profile) {
-              setUser({
-                id: session.user.id,
-                email: session.user.email,
-                name: profile.full_name,
-                role: profile.role,
-                verified: profile.nin_verified,
-              })
-            }
-          })
-      }
-    })
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    if (session) {
+      supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .single()
+        .then(({ data: profile }) => {
+          if (profile) {
+            setUser({
+              id: session.user.id,
+              email: session.user.email,
+              name: profile.full_name,
+              role: profile.role,
+              verified: profile.nin_verified,
+            })
+          }
+        })
+    }
 
-    supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) setUser(null)
-    })
-  }, [])
+    // Handle password reset redirect from email link
+    const hash = window.location.hash
+    if (hash.includes('type=recovery')) {
+      setPage('reset-password')
+    }
+  })
+
+  supabase.auth.onAuthStateChange((_event, session) => {
+    if (!session) setUser(null)
+  })
+}, [])
+
+  // Handle password reset redirect
+const hash = window.location.hash
+if (hash.includes('type=recovery') || hash.includes('type=signup')) {
+  setPage('reset-password')
+}
 
   // Handle browser back button / swipe back
   useEffect(() => {

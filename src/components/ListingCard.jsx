@@ -26,23 +26,25 @@ export default function ListingCard({ listing, onClick }) {
       {/* IMAGE */}
       <div style={{ position: "relative" }}>
         <img
-         src={listing.images?.[0] || listing.img || ""}
-         alt={listing.title}
+          src={listing.images?.[0] || listing.img || ""}
+          alt={listing.title}
           style={{ width: "100%", height: 196, objectFit: "cover", display: "block" }}
         />
         <div style={{ position: "absolute", top: 10, left: 10, display: "flex", gap: 6 }}>
-  {listing.verified && (
-    <Badge color="#fff" bg="#0d1b5e">
-      <Ic d={I.shield} s={10} fill="#fff" stroke="none" />
-      Verified
-    </Badge>
-  )}
-  {listing.status === "rented" && (
-    <Badge color="#fff" bg="#b91c1c">
-      🔑 Rented
-    </Badge>
-  )}
-</div>
+          {listing.verified && listing.status !== 'rented' && (
+            <Badge color="#fff" bg="#0d1b5e">
+              <Ic d={I.shield} s={10} fill="#fff" stroke="none" />
+              Verified
+            </Badge>
+          )}
+          {listing.status === 'rented' && (
+            /* REMOVED: Key emoji. Kept clean premium white text typography for top-image overlay */
+            <Badge color="#fff" bg="#b91c1c">
+              Rented Out
+            </Badge>
+          )}
+        </div>
+        
         <div style={{
           position: "absolute", bottom: 10, right: 10,
           background: "rgba(0,0,0,.55)", color: "#fff",
@@ -73,16 +75,21 @@ export default function ListingCard({ listing, onClick }) {
           {listing.title}
         </h3>
 
+        {/* METRICS ROW */}
         <div style={{ display: "flex", gap: 12, marginBottom: 14 }}>
-          <span style={{ display: "flex", alignItems: "center", gap: 3, color: "#6b7280", fontSize: "0.77rem" }}>
-         🍳{listing.kitchs} Kitchen
+          {/* REPLACED: Frying pan emoji with your platform's vector icon system */}
+          <span style={{ display: "flex", alignItems: "center", gap: 4, color: "#6b7280", fontSize: "0.77rem" }}>
+            <Ic d={I.home} s={12} /> {listing.kitchs} Kitchen
           </span>
-          <span style={{ display: "flex", alignItems: "center", gap: 3, color: "#6b7280", fontSize: "0.77rem" }}>
+          <span style={{ display: "flex", alignItems: "center", gap: 4, color: "#6b7280", fontSize: "0.77rem" }}>
             <Ic d={I.bath} s={12} /> {listing.baths} Bath
           </span>
-          <span style={{ color: "#6b7280", fontSize: "0.77rem" }}>{listing.size}</span>
+          <span style={{ color: "#6b7280", fontSize: "0.77rem", display: "flex", alignItems: "center" }}>
+            {listing.size}
+          </span>
         </div>
 
+        {/* FOOTER VALUES */}
         <div style={{
           display: "flex", justifyContent: "space-between",
           alignItems: "center", borderTop: "1px solid #f0efea", paddingTop: 12,
@@ -93,15 +100,17 @@ export default function ListingCard({ listing, onClick }) {
             </div>
             <div style={{ fontSize: "0.7rem", color: "#9ca3af" }}>per year</div>
           </div>
+
+          {/* FIXED & REPLACED: Removed curly nesting loop and emoji structures completely */}
           {listing.status === "rented" ? (
-  <Badge color="#991b1b" bg="#fee2e2">
-    🔑 No Longer Available
-  </Badge>
-) : (
-  <Badge color="#1e3db5" bg="#eef2ff">
-    Unlock ₦100
-  </Badge>
-)}
+            <Badge color="#991b1b" bg="#fee2e2">
+              No Longer Available
+            </Badge>
+          ) : (
+            <Badge color="#1e3db5" bg="#eef2ff">
+              View Apartment
+            </Badge>
+          )}
         </div>
       </div>
     </div>

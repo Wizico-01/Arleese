@@ -1,16 +1,54 @@
 import { useState } from 'react'
+import { supabase } from '../lib/supabase'
 import { Ic, I } from '../Icons'
-import { Btn } from '../UI'
+import { Btn, ErrBox } from '../UI'
 
 export default function UnlockModal({ listing: l, onClose, user, setPage }) {
   const [method, setMethod] = useState("")
   const [done, setDone] = useState(false)
   const [loading, setLoading] = useState(false)
   const [confirmed, setConfirmed] = useState(false)
+  const [err, setErr] = useState("")
 
-  const pay = () => {
+  const pay = async () => {
+    // 🌟 GLOBAL SECURITY CHECK: Block unauthenticated users instantly
+    if (!user?.id) {
+      setErr("Please log in to unlock contacts.")
+      return
+    }
+
     setLoading(true)
-    setTimeout(() => { setLoading(false); setDone(true) }, 1400)
+    setErr("")
+
+    try {
+      if (method === "transfer") {
+        // REAL DB INSERTION: Save manual transfer to Supabase unlocks schema
+        const { error } = await supabase
+          .from('unlocks')
+          .insert({
+            tenant_id: user.id,
+            listing_id: l.id,
+            amount: 100, // Matches your displayed ₦100 price value
+            payment_method: 'bank_transfer',
+            payment_ref: `MANUAL-${Date.now()}`,
+          })
+
+        if (error) {
+          setErr(error.message)
+          setLoading(false)
+          return
+        }
+      } else {
+        // Paystack mock simulation (Upgrade this hook once your Paystack Webhook or Popup is configured)
+        await new Promise(resolve => setTimeout(resolve, 1400))
+      }
+
+      setDone(true)
+    } catch (e) {
+      setErr("Failed to process payment. Please verify your connection.")
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -73,7 +111,7 @@ export default function UnlockModal({ listing: l, onClose, user, setPage }) {
               gap: 14, marginBottom: 20,
             }}>
               {[
-                ["Landlord", l.landlord],
+                ["Landlord", l.landlord || "Property Owner"],
                 ["Phone", "+234 801 234 5678"],
                 ["Address", `14B Harmony Close, ${l.area}, ${l.state}`],
               ].map(([k, v]) => (
@@ -109,14 +147,15 @@ export default function UnlockModal({ listing: l, onClose, user, setPage }) {
               borderRadius: 10, padding: 12, alignItems: "center", marginBottom: 20,
             }}>
               <img
-                src={l.img} alt=""
+                src={l.img || (l.images?.[0] || "")} 
+                alt=""
                 style={{ width: 58, height: 52, objectFit: "cover", borderRadius: 8, flexShrink: 0 }}
               />
               <div>
                 <div style={{ fontWeight: 700, color: "#0d1b5e", fontSize: "0.88rem" }}>{l.title}</div>
                 <div style={{ color: "#6b7280", fontSize: "0.76rem" }}>{l.area}, {l.state}</div>
                 <div style={{ color: "#1e3db5", fontWeight: 700, fontSize: "0.88rem", marginTop: 2 }}>
-                  ₦{l.price.toLocaleString()}/yr
+                  ₦{l.price?.toLocaleString()}/yr
                 </div>
               </div>
             </div>
@@ -127,7 +166,7 @@ export default function UnlockModal({ listing: l, onClose, user, setPage }) {
 
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <button
-                onClick={() => setMethod("paystack")}
+                onClick={() => { setMethod("paystack"); setErr(""); }}
                 style={{
                   background: "#0d1b5e", color: "#fff", border: "none",
                   borderRadius: 10, padding: "15px 18px", cursor: "pointer",
@@ -136,7 +175,7 @@ export default function UnlockModal({ listing: l, onClose, user, setPage }) {
                 }}
               >
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: "0.88rem" }}>💳 Pay with Paystack</div>
+                  <div style={{ fontWeight: 700, fontSize: "0.88rem" }}>Pay with Paystack</div>
                   <div style={{ fontSize: "0.73rem", opacity: .65, marginTop: 2 }}>
                     Card · Bank Transfer · USSD
                   </div>
@@ -145,7 +184,7 @@ export default function UnlockModal({ listing: l, onClose, user, setPage }) {
               </button>
 
               <button
-                onClick={() => setMethod("transfer")}
+                onClick={() => { setMethod("transfer"); setErr(""); }}
                 style={{
                   background: "#fff", color: "#0d1b5e",
                   border: "2px solid #0d1b5e", borderRadius: 10,
@@ -155,7 +194,7 @@ export default function UnlockModal({ listing: l, onClose, user, setPage }) {
                 }}
               >
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: "0.88rem" }}>🏦 Manual Bank Transfer</div>
+                  <div style={{ fontWeight: 700, fontSize: "0.88rem" }}>Manual Bank Transfer</div>
                   <div style={{ fontSize: "0.73rem", color: "#6b7280", marginTop: 2 }}>
                     GTBank · Opay · Kuda · any bank
                   </div>
@@ -169,7 +208,7 @@ export default function UnlockModal({ listing: l, onClose, user, setPage }) {
           /* PAYSTACK */
           <>
             <button
-              onClick={() => setMethod("")}
+              onClick={() => { setMethod(""); setErr(""); }}
               style={{
                 background: "none", border: "none", color: "#6b7280",
                 cursor: "pointer", fontSize: "0.8rem", marginBottom: 14,
@@ -184,6 +223,9 @@ export default function UnlockModal({ listing: l, onClose, user, setPage }) {
             }}>
               Pay via Paystack
             </h3>
+
+            {err && <div style={{ marginBottom: 12 }}><ErrBox msg={err} /></div>}
+
             <div style={{
               background: "#f0fdf4", border: "1px solid #bbf7d0",
               borderRadius: 10, padding: 13, marginBottom: 16,
@@ -216,7 +258,7 @@ export default function UnlockModal({ listing: l, onClose, user, setPage }) {
           /* BANK TRANSFER */
           <>
             <button
-              onClick={() => setMethod("")}
+              onClick={() => { setMethod(""); setErr(""); }}
               style={{
                 background: "none", border: "none", color: "#6b7280",
                 cursor: "pointer", fontSize: "0.8rem",
@@ -231,6 +273,9 @@ export default function UnlockModal({ listing: l, onClose, user, setPage }) {
             }}>
               Manual Bank Transfer
             </h3>
+
+            {err && <div style={{ marginBottom: 12 }}><ErrBox msg={err} /></div>}
+
             <div style={{
               background: "#f4f3ef", borderRadius: 12,
               overflow: "hidden", marginBottom: 16,
@@ -252,7 +297,7 @@ export default function UnlockModal({ listing: l, onClose, user, setPage }) {
               ))}
             </div>
             <p style={{ fontSize: "0.76rem", color: "#6b7280", marginBottom: 14 }}>
-              Use your email address as the transfer narration so we can match your payment quickly.
+              Use your account email address as the transfer description narration so we can confirm your account quickly.
             </p>
             <label style={{
               display: "flex", alignItems: "center", gap: 9,
@@ -265,7 +310,7 @@ export default function UnlockModal({ listing: l, onClose, user, setPage }) {
                 onChange={e => setConfirmed(e.target.checked)}
                 style={{ accentColor: "#0d1b5e", width: 15, height: 15 }}
               />
-              I have completed the transfer of ₦1,000
+              I have completed the transfer of ₦100
             </label>
             <Btn full onClick={pay} disabled={!confirmed || loading}>
               {loading ? "Verifying…" : "Confirm Transfer & Unlock"}
