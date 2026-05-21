@@ -33,28 +33,55 @@ export default function DashboardPage({ user, setPage }) {
     setRentedError(p => ({ ...p, [id]: "" }))
   }
 
-  const confirmRented = (id) => {
-    const typed = rentedInput[id]?.trim().toUpperCase()
-    if (typed !== "RENTED") {
-      setRentedError(p => ({
-        ...p,
-        [id]: 'Type exactly "RENTED" in capital letters to confirm.'
-      }))
+  const confirmRented = async (id) => {
+  const typed = rentedInput[id]?.trim().toUpperCase()
+  if (typed !== "RENTED") {
+    setRentedError(p => ({
+      ...p,
+      [id]: 'Type exactly "RENTED" in capital letters to confirm.'
+    }))
+    return
+  }
+
+  try {
+    // Save to Supabase
+    const { error } = await supabase
+      .from('listings')
+      .update({ status: 'rented' })
+      .eq('id', id)
+
+    if (error) {
+      setRentedError(p => ({ ...p, [id]: 'Failed to update. Please try again.' }))
       return
     }
+
+    // Update local state
     setListings(p => p.map(l =>
       l.id === id ? { ...l, status: "rented" } : l
     ))
     setShowRentedBox(p => ({ ...p, [id]: false }))
     setRentedInput(p => ({ ...p, [id]: "" }))
     setRentedError(p => ({ ...p, [id]: "" }))
-  }
 
-  const markAvailable = (id) => {
+  } catch (e) {
+    setRentedError(p => ({ ...p, [id]: 'Something went wrong. Try again.' }))
+  }
+}
+
+  const markAvailable = async (id) => {
+  try {
+    await supabase
+      .from('listings')
+      .update({ status: 'active' })
+      .eq('id', id)
+
     setListings(p => p.map(l =>
       l.id === id ? { ...l, status: "active" } : l
     ))
+  } catch (e) {
+    console.log('Error marking available:', e)
   }
+}
   const add = (l) => {
     setListings(p => [...p, {
       ...l,

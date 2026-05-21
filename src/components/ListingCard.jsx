@@ -30,21 +30,21 @@ export default function ListingCard({ listing, onClick }) {
           alt={listing.title}
           style={{ width: "100%", height: 196, objectFit: "cover", display: "block" }}
         />
-        <div style={{ position: "absolute", top: 10, left: 10, display: "flex", gap: 6 }}>
-          {listing.verified && listing.status !== 'rented' && (
-            <Badge color="#fff" bg="#0d1b5e">
-              <Ic d={I.shield} s={10} fill="#fff" stroke="none" />
-              Verified
-            </Badge>
-          )}
-          {listing.status === 'rented' && (
-            /* REMOVED: Key emoji. Kept clean premium white text typography for top-image overlay */
+
+        {/* TOP LEFT BADGE */}
+        <div style={{ position: "absolute", top: 10, left: 10 }}>
+          {listing.status === 'rented' ? (
             <Badge color="#fff" bg="#b91c1c">
-              Rented Out
+              🔑 Rented Out
             </Badge>
-          )}
+          ) : listing.verified ? (
+            <Badge color="#fff" bg="#0d1b5e">
+              <Ic d={I.shield} s={10} fill="#fff" stroke="none" /> Verified
+            </Badge>
+          ) : null}
         </div>
-        
+
+        {/* DATE BADGE */}
         <div style={{
           position: "absolute", bottom: 10, right: 10,
           background: "rgba(0,0,0,.55)", color: "#fff",
@@ -75,34 +75,27 @@ export default function ListingCard({ listing, onClick }) {
           {listing.title}
         </h3>
 
-        {/* METRICS ROW */}
         <div style={{ display: "flex", gap: 12, marginBottom: 14 }}>
-          {/* REPLACED: Frying pan emoji with your platform's vector icon system */}
           <span style={{ display: "flex", alignItems: "center", gap: 4, color: "#6b7280", fontSize: "0.77rem" }}>
-            <Ic d={I.home} s={12} /> {listing.kitchs} Kitchen
+            <Ic d={I.bath} s={12} /> {listing.kitchs || 0} Kitchen
           </span>
           <span style={{ display: "flex", alignItems: "center", gap: 4, color: "#6b7280", fontSize: "0.77rem" }}>
-            <Ic d={I.bath} s={12} /> {listing.baths} Bath
-          </span>
-          <span style={{ color: "#6b7280", fontSize: "0.77rem", display: "flex", alignItems: "center" }}>
-            {listing.size}
+            <Ic d={I.bath} s={12} /> {listing.baths || 0} Bath
           </span>
         </div>
 
-        {/* FOOTER VALUES */}
         <div style={{
           display: "flex", justifyContent: "space-between",
           alignItems: "center", borderTop: "1px solid #f0efea", paddingTop: 12,
         }}>
           <div>
             <div style={{ fontWeight: 700, color: "#0d1b5e", fontSize: "1.06rem" }}>
-              ₦{listing.price.toLocaleString()}
+              ₦{listing.price?.toLocaleString()}
             </div>
             <div style={{ fontSize: "0.7rem", color: "#9ca3af" }}>per year</div>
           </div>
 
-          {/* FIXED & REPLACED: Removed curly nesting loop and emoji structures completely */}
-          {listing.status === "rented" ? (
+          {listing.status === 'rented' ? (
             <Badge color="#991b1b" bg="#fee2e2">
               No Longer Available
             </Badge>

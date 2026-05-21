@@ -11,6 +11,39 @@ export default function ResetPasswordPage({ setPage }) {
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState("")
   const [success, setSuccess] = useState(false)
+  const [sessionReady, setSessionReady] = useState(false)
+
+  useEffect(() => {
+    // Extract tokens from URL for password recovery
+    const hashParams = new URLSearchParams(
+      window.location.hash.replace('#', '').replace('/', '')
+    )
+    const accessToken = hashParams.get('access_token')
+    const refreshToken = hashParams.get('refresh_token')
+    const type = hashParams.get('type')
+
+    if (type === 'recovery' && accessToken) {
+      supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken || '',
+      }).then(({ error }) => {
+        if (error) {
+          setErr("This reset link is invalid or has expired. Please request a new one.")
+        } else {
+          setSessionReady(true)
+        }
+      })
+    } else {
+      // Check if user already has a valid session
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) {
+          setSessionReady(true)
+        } else {
+          setErr("This reset link is invalid or has expired. Please request a new one.")
+        }
+      })
+    }
+  }, [])
 
   const submit = async () => {
     if (!password || !confirm) {
@@ -100,63 +133,80 @@ export default function ResetPasswordPage({ setPage }) {
         <Card style={{ padding: "30px 26px" }}>
           <ErrBox msg={err} />
 
-          {/* NEW PASSWORD */}
-          <div style={{ marginBottom: 18 }}>
-            <label style={{
-              display: "block", fontSize: "0.79rem",
-              fontWeight: 600, color: "#4b5563", marginBottom: 6,
-            }}>
-              New Password <span style={{ color: "#b91c1c" }}>*</span>
-            </label>
-            <div style={{ position: "relative" }}>
-              <span style={{
-                position: "absolute", left: 13, top: "50%",
-                transform: "translateY(-50%)",
-                color: "#9ca3af", display: "flex", pointerEvents: "none",
-              }}>
-                <Ic d={I.lock} s={14} />
-              </span>
-              <input
-                type={showPw ? "text" : "password"}
-                placeholder="Minimum 8 characters"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                style={{
-                  width: "100%", padding: "10px 42px 10px 40px",
-                  border: "1.5px solid #e5e7eb", borderRadius: 8,
-                  fontSize: "0.88rem", background: "#fafafa",
-                }}
-                onFocus={e => e.target.style.borderColor = "#0d1b5e"}
-                onBlur={e => e.target.style.borderColor = "#e5e7eb"}
-              />
-              <button
-                onClick={() => setShowPw(s => !s)}
-                style={{
-                  position: "absolute", right: 12, top: "50%",
-                  transform: "translateY(-50%)",
-                  background: "none", border: "none",
-                  color: "#9ca3af", cursor: "pointer",
-                  padding: 0, display: "flex",
-                }}
-              >
-                <Ic d={showPw ? I.eyeOff : I.eye} s={15} />
-              </button>
+          {!sessionReady && !err && (
+            <div style={{ textAlign: "center", padding: "20px 0", color: "#6b7280" }}>
+              Verifying your reset link...
             </div>
-          </div>
+          )}
 
-          <Field
-            label="Confirm New Password"
-            type="password"
-            placeholder="Repeat your new password"
-            value={confirm}
-            onChange={e => setConfirm(e.target.value)}
-            icon={<Ic d={I.lock} s={14} />}
-            required
-          />
+          {sessionReady && (
+            <>
+              <div style={{ marginBottom: 18 }}>
+                <label style={{
+                  display: "block", fontSize: "0.79rem",
+                  fontWeight: 600, color: "#4b5563", marginBottom: 6,
+                }}>
+                  New Password <span style={{ color: "#b91c1c" }}>*</span>
+                </label>
+                <div style={{ position: "relative" }}>
+                  <span style={{
+                    position: "absolute", left: 13, top: "50%",
+                    transform: "translateY(-50%)",
+                    color: "#9ca3af", display: "flex", pointerEvents: "none",
+                  }}>
+                    <Ic d={I.lock} s={14} />
+                  </span>
+                  <input
+                    type={showPw ? "text" : "password"}
+                    placeholder="Minimum 8 characters"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    style={{
+                      width: "100%", padding: "10px 42px 10px 40px",
+                      border: "1.5px solid #e5e7eb", borderRadius: 8,
+                      fontSize: "0.88rem", background: "#fafafa",
+                    }}
+                    onFocus={e => e.target.style.borderColor = "#0d1b5e"}
+                    onBlur={e => e.target.style.borderColor = "#e5e7eb"}
+                  />
+                  <button
+                    onClick={() => setShowPw(s => !s)}
+                    style={{
+                      position: "absolute", right: 12, top: "50%",
+                      transform: "translateY(-50%)",
+                      background: "none", border: "none",
+                      color: "#9ca3af", cursor: "pointer",
+                      padding: 0, display: "flex",
+                    }}
+                  >
+                    <Ic d={showPw ? I.eyeOff : I.eye} s={15} />
+                  </button>
+                </div>
+              </div>
 
-          <Btn full onClick={submit} disabled={loading}>
-            {loading ? "Updating…" : "Update Password"}
-          </Btn>
+              <Field
+                label="Confirm New Password"
+                type="password"
+                placeholder="Repeat your new password"
+                value={confirm}
+                onChange={e => setConfirm(e.target.value)}
+                icon={<Ic d={I.lock} s={14} />}
+                required
+              />
+
+              <Btn full onClick={submit} disabled={loading}>
+                {loading ? "Updating…" : "Update Password"}
+              </Btn>
+            </>
+          )}
+
+          {err && !sessionReady && (
+            <div style={{ marginTop: 16 }}>
+              <Btn full onClick={() => setPage('login')}>
+                Back to Login
+              </Btn>
+            </div>
+          )}
         </Card>
       </div>
     </div>
