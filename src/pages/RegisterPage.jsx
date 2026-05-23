@@ -353,29 +353,28 @@ export default function RegisterPage({ setPage, setUser, defaultRole }) {
               required
             />
 
-            <label style={{
-              display: "flex", alignItems: "flex-start",
-              gap: 9, cursor: "pointer", marginBottom: 20,
-              fontSize: "0.82rem", color: "#374151",
-            }}>
-              <input
-                type="checkbox"
-                checked={form.terms}
-                onChange={e => set("terms", e.target.checked)}
-                style={{
-                  marginTop: 2, accentColor: "#0d1b5e",
-                  width: 14, height: 14, flexShrink: 0,
-                }}
-              />
-              I agree to Arleece{" "}
-              <span style={{ color: "#1e3db5", fontWeight: 600 }}>
-                Terms of Service
-              </span>{" "}
-              and{" "}
-              <span style={{ color: "#1e3db5", fontWeight: 600 }}>
-                Privacy Policy
-              </span>
-            </label>
+            <label style={{ display: "flex", alignItems: "flex-start", gap: 9, cursor: "pointer", marginBottom: 20, fontSize: "0.82rem", color: "#374151" }}>
+  <input
+    type="checkbox"
+    checked={form.terms}
+    onChange={e => set("terms", e.target.checked)}
+    style={{ marginTop: 2, accentColor: "#0d1b5e", width: 14, height: 14, flexShrink: 0 }}
+  />
+  I agree to Arleece's{" "}
+  <span
+    onClick={e => { e.preventDefault(); e.stopPropagation(); setPage('terms'); }}
+    style={{ color: "#1e3db5", fontWeight: 600, cursor: "pointer", textDecoration: "underline" }}
+  >
+    Terms of Service
+  </span>
+  {" "}and{" "}
+  <span
+    onClick={e => { e.preventDefault(); e.stopPropagation(); setPage('terms'); }}
+    style={{ color: "#1e3db5", fontWeight: 600, cursor: "pointer", textDecoration: "underline" }}
+  >
+    Privacy Policy
+  </span>
+</label>
 
             <Btn full onClick={next} disabled={loading}>
               {loading

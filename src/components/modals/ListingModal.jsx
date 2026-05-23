@@ -221,32 +221,49 @@ export default function ListingModal({ listing: l, onClose, onUnlock, user, setP
             </div>
           )}
 
-          {/* UNLOCK BANNER */}
-          <div style={{
-            background: "linear-gradient(135deg,#f0f3ff,#eaefff)",
-            border: "1px solid #c7d4fd",
-            borderRadius: 13, padding: "18px 20px",
-          }}>
+          {/* DYNAMIC ACTION SECTION */}
+          {l.status !== 'rented' ? (
+            /* UNLOCK BANNER — only show if not rented */
             <div style={{
-              display: "flex", justifyContent: "space-between",
-              alignItems: "center", flexWrap: "wrap", gap: 12,
+              background: "linear-gradient(135deg,#f0f3ff,#eaefff)",
+              border: "1px solid #c7d4fd",
+              borderRadius: 13, padding: "18px 20px",
             }}>
-              <div>
-                <div style={{
-                  fontWeight: 700, color: "#0d1b5e",
-                  fontSize: "0.96rem", marginBottom: 3,
-                }}>
-                  Get Direct Landlord Contact
+              <div style={{
+                display: "flex", justifyContent: "space-between",
+                alignItems: "center", flexWrap: "wrap", gap: 12,
+              }}>
+                <div>
+                  <div style={{ fontWeight: 700, color: "#0d1b5e", fontSize: "0.96rem", marginBottom: 3 }}>
+                    Get Direct Landlord Contact
+                  </div>
+                  <div style={{ color: "#6b7280", fontSize: "0.79rem" }}>
+                    One-time ₦100 fee. No agent. No recurring charges.
+                  </div>
                 </div>
-                <div style={{ color: "#6b7280", fontSize: "0.79rem" }}>
-                  One-time ₦100 fee. No agent. No recurring charges.
-                </div>
+                <Btn onClick={() => { if (!user) { setPage('login') } else { onUnlock() } }}>
+                  <Ic d={I.lock} s={14} /> Unlock for ₦100
+                </Btn>
               </div>
-              <Btn onClick={() => { if (!user) { setPage('login') } else { onUnlock() } }}>
-                <Ic d={I.lock} s={14} /> Unlock for ₦100
-              </Btn>
             </div>
-          </div>
+          ) : (
+            /* RENTED NOTICE — show if property status is 'rented' */
+            <div style={{
+              background: "#fee2e2",
+              border: "1px solid #fca5a5",
+              borderRadius: 13, padding: "18px 20px",
+              textAlign: "center",
+            }}>
+              <div style={{ fontSize: "1.5rem", marginBottom: 6 }}>🔑</div>
+              <div style={{ fontWeight: 700, color: "#991b1b", fontSize: "0.96rem", marginBottom: 4 }}>
+                This Apartment Has Been Rented
+              </div>
+              <div style={{ color: "#b91c1c", fontSize: "0.82rem" }}>
+                This property is no longer available for rent.
+                Browse other listings to find your next home.
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

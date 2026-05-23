@@ -15,16 +15,19 @@ export default function DashboardPage({ user, setPage }) {
   const [listings, setListings] = useState([])
 
   useEffect(() => {
-    const fetchMyListings = async () => {
-      const { data } = await supabase
-        .from('listings')
-        .select('*')
-        .eq('landlord_id', user?.id)
-        .order('created_at', { ascending: false })
-      if (data) setListings(data)
-    }
-    fetchMyListings()
-  }, [user])
+  const fetchMyListings = async () => {
+    if (!user?.id) return
+
+    const { data } = await supabase
+      .from('listings')
+      .select('*, unlocks(count)')
+      .eq('landlord_id', user.id)
+      .order('created_at', { ascending: false })
+
+    if (data) setListings(data)
+  }
+  fetchMyListings()
+}, [user])
 
   const remove = (id) => setListings(l => l.filter(x => x.id !== id))
   const toggleRentedBox = (id) => {
@@ -97,7 +100,7 @@ export default function DashboardPage({ user, setPage }) {
     { icon: <Building2 size={26} strokeWidth={1.5} style={{ color: "#0d1b5e" }} />, l: "Total Listings", v: listings.length },
     { icon: <CheckCircle2 size={26} strokeWidth={1.5} style={{ color: "#0d1b5e" }} />, l: "Active", v: listings.filter(l => l.status === "active").length },
     { icon: <Key size={26} strokeWidth={1.5} style={{ color: "#0d1b5e" }} />, l: "Rented Out", v: listings.filter(l => l.status === "rented").length },
-    { icon: <Unlock size={26} strokeWidth={1.5} style={{ color: "#0d1b5e" }} />, l: "Contacts Unlocked", v: listings.reduce((s, l) => s + (l.unlocks || 0), 0) },
+    { icon: <Unlock size={26} strokeWidth={1.5} style={{ color: "#0d1b5e" }} />, l: "Contacts Unlocked", v: listings.reduce((s, l) => s + (l.unlocks?.[0]?.count || 0), 0) },
   ]
 
   if (showAdd) return <AddListingForm onBack={() => setShowAdd(false)} onSubmit={add} user={user} />

@@ -37,8 +37,12 @@ export default function ProfilePage({ user, setPage, logout }) {
             .eq('tenant_id', user.id)
             .order('paid_at', { ascending: false })
 
+          // DIAGNOSTICS LOGGING ADDED HERE
+          console.log('Unlocks data:', data)
+          console.log('Unlocks error:', error)
+
           if (error) {
-            console.log('Unlocks error:', JSON.stringify(error))
+            console.log('Unlocks error stringified:', JSON.stringify(error))
           }
           if (data) {
             console.log('Unlocks found:', data.length)

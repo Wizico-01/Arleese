@@ -18,60 +18,54 @@ export default function App() {
   const [pageHistory, setPageHistory] = useState(['home'])
 
   useEffect(() => {
-    // Check for password reset token in URL FIRST
-    const fullUrl = window.location.href
-    const hashUrl = window.location.hash
+  // STEP 1: Check for password recovery token in URL
+  const urlParams = new URLSearchParams(window.location.search)
+  const hashString = window.location.hash
 
-    if (
-      fullUrl.includes('type=recovery') ||
-      hashUrl.includes('type=recovery') ||
-      fullUrl.includes('access_token') && fullUrl.includes('recovery')
-    ) {
+  if (
+    hashString.includes('type=recovery') ||
+    hashString.includes('access_token') ||
+    urlParams.get('type') === 'recovery'
+  ) {
+    setPage('reset-password')
+    return
+  }
+
+  // STEP 2: Load session
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    if (session) {
+      supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .single()
+        .then(({ data: profile }) => {
+          if (profile) {
+            setUser({
+              id: session.user.id,
+              email: session.user.email,
+              name: profile.full_name,
+              role: profile.role,
+              verified: profile.nin_verified,
+            })
+          }
+        })
+    }
+  })
+
+  // STEP 3: Listen for PASSWORD_RECOVERY event
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    if (event === 'PASSWORD_RECOVERY') {
       setPage('reset-password')
       return
     }
-
-    // Set initial page from hash
-    const hashPage = hashUrl.replace('#', '').split('?')[0]
-    if (hashPage && hashPage !== '') {
-      setPage(hashPage)
+    if (!session) {
+      setUser(null)
     }
+  })
 
-    // Auth session check
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single()
-          .then(({ data: profile }) => {
-            if (profile) {
-              setUser({
-                id: session.user.id,
-                email: session.user.email,
-                name: profile.full_name,
-                role: profile.role,
-                verified: profile.nin_verified,
-              })
-            }
-          })
-      }
-    })
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        setPage('reset-password')
-        return
-      }
-      if (!session) {
-        setUser(null)
-      }
-    })
-
-    return () => subscription.unsubscribe()
-  }, [])
+  return () => subscription.unsubscribe()
+}, [])
 
   // Handle browser back button
   useEffect(() => {

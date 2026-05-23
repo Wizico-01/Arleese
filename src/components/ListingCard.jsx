@@ -35,7 +35,7 @@ export default function ListingCard({ listing, onClick }) {
         <div style={{ position: "absolute", top: 10, left: 10 }}>
           {listing.status === 'rented' ? (
             <Badge color="#fff" bg="#b91c1c">
-              🔑 Rented Out
+              Rented Out
             </Badge>
           ) : listing.verified ? (
             <Badge color="#fff" bg="#0d1b5e">
