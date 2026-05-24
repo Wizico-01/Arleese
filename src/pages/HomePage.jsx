@@ -119,7 +119,7 @@ export default function HomePage({ setPage, user }) {
             {[
               ["1,200+", "Verified Listings"],
               ["36", "States Covered"],
-              ["₦100", "Flat Unlock Fee"],
+              ["₦200", "Flat Unlock Fee"],
               ["0%", "Agent Commission"],
             ].map(([n, l]) => (
               <div key={l} style={{ textAlign: "center" }}>
@@ -166,7 +166,7 @@ export default function HomePage({ setPage, user }) {
             {[
               { n: "01", icon: <Search size={34} strokeWidth={1.5} style={{ color: "#0d1b5e" }} />, t: "Browse Listings", d: "Filter verified apartments by state, type, and price range." },
               { n: "02", icon: <Home size={34} strokeWidth={1.5} style={{ color: "#0d1b5e" }} />, t: "View Full Details", d: "See photos, amenities, and the exact rent, no hidden fees." },
-              { n: "03", icon: <Lock size={34} strokeWidth={1.5} style={{ color: "#0d1b5e" }} />, t: "Pay ₦100", d: "One-time flat fee to unlock contact." },
+              { n: "03", icon: <Lock size={34} strokeWidth={1.5} style={{ color: "#0d1b5e" }} />, t: "Pay ₦200", d: "One-time flat fee to unlock contact." },
               { n: "04", icon: <Phone size={34} strokeWidth={1.5} style={{ color: "#0d1b5e" }} />, t: "Call the Landlord", d: "Get direct phone and address. No middleman. Move in your way." },
             ].map(s => (
               <Card key={s.n} style={{ padding: 26 }}>

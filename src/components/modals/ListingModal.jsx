@@ -238,11 +238,11 @@ export default function ListingModal({ listing: l, onClose, onUnlock, user, setP
                     Get Direct Landlord Contact
                   </div>
                   <div style={{ color: "#6b7280", fontSize: "0.79rem" }}>
-                    One-time ₦100 fee. No agent. No recurring charges.
+                    One-time ₦200 fee. No agent. No recurring charges.
                   </div>
                 </div>
                 <Btn onClick={() => { if (!user) { setPage('login') } else { onUnlock() } }}>
-                  <Ic d={I.lock} s={14} /> Unlock for ₦100
+                  <Ic d={I.lock} s={14} /> Unlock for ₦200
                 </Btn>
               </div>
             </div>

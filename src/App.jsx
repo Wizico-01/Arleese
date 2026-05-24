@@ -13,7 +13,11 @@ import ProfilePage from './pages/ProfilePage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 
 export default function App() {
-  const [page, setPage] = useState('home')
+  const [page, setPage] = useState(() => {
+  const hash = window.location.hash.replace('#', '').split('?')[0].split('&')[0]
+  const validPages = ['home', 'browse', 'login', 'register', 'dashboard', 'profile', 'terms', 'saved']
+  return validPages.includes(hash) ? hash : 'home'
+})
   const [user, setUser] = useState(null)
   const [pageHistory, setPageHistory] = useState(['home'])
 

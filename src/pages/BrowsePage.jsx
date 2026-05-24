@@ -224,7 +224,7 @@ export default function BrowsePage({ user, setPage }) {
                         </div>
                       </div>
                       <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
-                        <Badge color="#1e3db5" bg="#eef2ff">Unlock Contact — ₦100</Badge>
+                        <Badge color="#1e3db5" bg="#eef2ff">Unlock Contact — ₦200</Badge>
                       </div>
                     </div>
                   </div>

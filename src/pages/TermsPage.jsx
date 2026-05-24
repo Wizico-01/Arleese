@@ -51,7 +51,7 @@ export default function TermsPage({ setPage }) {
           </p>
           <p style={{ color: "#374151", lineHeight: 1.8, marginBottom: 16 }}>
             {/* ADD MORE SECTIONS AS NEEDED */}
-            The ₦100 unlock fee is non-refundable once a landlord contact has been revealed.
+            The ₦200 unlock fee is non-refundable once a landlord contact has been revealed.
           </p>
         </div>
 

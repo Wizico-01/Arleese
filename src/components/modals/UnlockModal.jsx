@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { Ic, I } from '../Icons'
 import { Btn, ErrBox } from '../UI'
+import { usePaystackPayment } from 'react-paystack'
 
 export default function UnlockModal({ listing: l, onClose, user, setPage }) {
   const [method, setMethod] = useState("")
@@ -10,8 +11,20 @@ export default function UnlockModal({ listing: l, onClose, user, setPage }) {
   const [confirmed, setConfirmed] = useState(false)
   const [err, setErr] = useState("")
 
+  // PAYSTACK TRANSACTION CONFIGURATION
+  const paystackConfig = {
+    reference: `ARL-${l.id}-${Date.now()}`,
+    email: user?.email || '',
+    amount: 10000, // 10,000 kobo = ₦200 (Matches your modal's listed price!)
+    publicKey: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
+    currency: 'NGN',
+  }
+
+  // Initialize the Paystack payment hook trigger setup
+  const initializePayment = usePaystackPayment(paystackConfig)
+
   const pay = async () => {
-    // 🌟 GLOBAL SECURITY CHECK: Block unauthenticated users instantly
+    // GLOBAL SECURITY CHECK: Block unauthenticated users instantly
     if (!user?.id) {
       setErr("Please log in to unlock contacts.")
       return
@@ -21,14 +34,43 @@ export default function UnlockModal({ listing: l, onClose, user, setPage }) {
     setErr("")
 
     try {
-      if (method === "transfer") {
+      if (method === "paystack") {
+        // OPEN LIVE PAYSTACK GATEWAY
+        initializePayment(
+          // onSuccess Callback
+          async (reference) => {
+            const { error } = await supabase
+              .from('unlocks')
+              .insert({
+                tenant_id: user.id,
+                listing_id: l.id,
+                amount: 100, // Logs the ₦200 charge value cleanly
+                payment_method: 'paystack',
+                payment_ref: reference.reference,
+              })
+
+            if (error) {
+              setErr(error.message)
+              setLoading(false)
+              return
+            }
+            setLoading(false)
+            setDone(true)
+          },
+          // onClose Callback
+          () => {
+            setErr("Payment was cancelled. Please try again.")
+            setLoading(false)
+          }
+        )
+      } else if (method === "transfer") {
         // REAL DB INSERTION: Save manual transfer to Supabase unlocks schema
         const { error } = await supabase
           .from('unlocks')
           .insert({
             tenant_id: user.id,
             listing_id: l.id,
-            amount: 100, // Matches your displayed ₦100 price value
+            amount: 100, // Logs the manual ₦200 value
             payment_method: 'bank_transfer',
             payment_ref: `MANUAL-${Date.now()}`,
           })
@@ -38,15 +80,11 @@ export default function UnlockModal({ listing: l, onClose, user, setPage }) {
           setLoading(false)
           return
         }
-      } else {
-        // Paystack mock simulation (Upgrade this hook once your Paystack Webhook or Popup is configured)
-        await new Promise(resolve => setTimeout(resolve, 1400))
+        setLoading(false)
+        setDone(true)
       }
-
-      setDone(true)
     } catch (e) {
       setErr("Failed to process payment. Please verify your connection.")
-    } finally {
       setLoading(false)
     }
   }
@@ -231,12 +269,12 @@ export default function UnlockModal({ listing: l, onClose, user, setPage }) {
               borderRadius: 10, padding: 13, marginBottom: 16,
               fontSize: "0.81rem", color: "#166534",
             }}>
-              You will be redirected to Paystack's secure checkout to complete your ₦1,000 payment.
+              You will be redirected to Paystack's secure checkout to complete your ₦200 payment.
             </div>
             <div style={{ background: "#f4f3ef", borderRadius: 10, padding: 14, marginBottom: 18 }}>
               {[
-                ["Amount", "₦1,000"],
-                ["Reference", `RD-${l.id}-${Date.now().toString().slice(-5)}`],
+                ["Amount", "₦200"],
+                ["Reference", paystackConfig.reference],
                 ["Purpose", "Landlord Contact Unlock"],
               ].map(([k, v]) => (
                 <div key={k} style={{
@@ -284,7 +322,7 @@ export default function UnlockModal({ listing: l, onClose, user, setPage }) {
                 ["Bank", "Guarantee Trust Bank (GTB)"],
                 ["Account Name", "Arleece Nigeria Ltd"],
                 ["Account Number", "0123456789"],
-                ["Amount", "₦1,000"],
+                ["Amount", "₦200"],
               ].map(([k, v]) => (
                 <div key={k} style={{
                   display: "flex", justifyContent: "space-between",
@@ -310,7 +348,7 @@ export default function UnlockModal({ listing: l, onClose, user, setPage }) {
                 onChange={e => setConfirmed(e.target.checked)}
                 style={{ accentColor: "#0d1b5e", width: 15, height: 15 }}
               />
-              I have completed the transfer of ₦100
+              I have completed the transfer of ₦200
             </label>
             <Btn full onClick={pay} disabled={!confirmed || loading}>
               {loading ? "Verifying…" : "Confirm Transfer & Unlock"}

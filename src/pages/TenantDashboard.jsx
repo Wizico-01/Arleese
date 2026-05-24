@@ -58,7 +58,7 @@ export default function TenantDashboard({ user, setPage }) {
               No unlocked contacts yet
             </p>
             <p style={{ color: "#9ca3af", fontSize: "0.85rem" }}>
-              Browse apartments and pay ₦100 to unlock a landlord's contact
+              Browse apartments and pay ₦200 to unlock a landlord's contact
             </p>
           </div>
         ) : (
