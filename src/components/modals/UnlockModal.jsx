@@ -15,7 +15,7 @@ export default function UnlockModal({ listing: l, onClose, user, setPage }) {
   const paystackConfig = {
     reference: `ARL-${l.id}-${Date.now()}`,
     email: user?.email || '',
-    amount: 10000, // 10,000 kobo = ₦200 (Matches your modal's listed price!)
+    amount: 20000, // 20,000 kobo = ₦200 (Matches your modal's listed price!)
     publicKey: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
     currency: 'NGN',
   }
