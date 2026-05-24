@@ -18,14 +18,28 @@ export default function DashboardPage({ user, setPage }) {
   const fetchMyListings = async () => {
     if (!user?.id) return
 
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('listings')
-      .select('*, unlocks(count)')
+      .select('*')
       .eq('landlord_id', user.id)
       .order('created_at', { ascending: false })
 
+    if (error) {
+      console.log('Dashboard fetch error:', error)
+      return
+    }
     if (data) setListings(data)
+
+    // Separately count total unlocks for all landlord listings
+    const { count } = await supabase
+      .from('unlocks')
+      .select('id', { count: 'exact' })
+      .in('listing_id', data?.map(l => l.id) || [])
+
+    // Store total unlocks count separately if needed
+    console.log('Total unlocks:', count)
   }
+
   fetchMyListings()
 }, [user])
 
@@ -97,11 +111,11 @@ export default function DashboardPage({ user, setPage }) {
   }
 
   const stats = [
-    { icon: <Building2 size={26} strokeWidth={1.5} style={{ color: "#0d1b5e" }} />, l: "Total Listings", v: listings.length },
-    { icon: <CheckCircle2 size={26} strokeWidth={1.5} style={{ color: "#0d1b5e" }} />, l: "Active", v: listings.filter(l => l.status === "active").length },
-    { icon: <Key size={26} strokeWidth={1.5} style={{ color: "#0d1b5e" }} />, l: "Rented Out", v: listings.filter(l => l.status === "rented").length },
-    { icon: <Unlock size={26} strokeWidth={1.5} style={{ color: "#0d1b5e" }} />, l: "Contacts Unlocked", v: listings.reduce((s, l) => s + (l.unlocks?.[0]?.count || 0), 0) },
-  ]
+  { icon: <Building2 size={26} strokeWidth={1.5} style={{ color: "#0d1b5e" }} />, l: "Total Listings", v: listings.length },
+  { icon: <CheckCircle2 size={26} strokeWidth={1.5} style={{ color: "#0d1b5e" }} />, l: "Active", v: listings.filter(l => l.status === "active").length },
+  { icon: <Key size={26} strokeWidth={1.5} style={{ color: "#0d1b5e" }} />, l: "Rented Out", v: listings.filter(l => l.status === "rented").length },
+  { icon: <Unlock size={26} strokeWidth={1.5} style={{ color: "#0d1b5e" }} />, l: "Contacts Unlocked", v: listings.reduce((s, l) => s + (Number(l.unlocks) || 0), 0) },
+]
 
   if (showAdd) return <AddListingForm onBack={() => setShowAdd(false)} onSubmit={add} user={user} />
 

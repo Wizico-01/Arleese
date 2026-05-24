@@ -14,36 +14,48 @@ export default function ResetPasswordPage({ setPage }) {
   const [sessionReady, setSessionReady] = useState(false)
 
   useEffect(() => {
-    // Extract tokens from URL for password recovery
-    const hashParams = new URLSearchParams(
-      window.location.hash.replace('#', '').replace('/', '')
-    )
-    const accessToken = hashParams.get('access_token')
-    const refreshToken = hashParams.get('refresh_token')
-    const type = hashParams.get('type')
+  // Supabase puts the token in the URL hash after the # sign
+  // The format is: #access_token=XXX&refresh_token=YYY&type=recovery
+  const hash = window.location.hash
 
-    if (type === 'recovery' && accessToken) {
-      supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken || '',
-      }).then(({ error }) => {
-        if (error) {
-          setErr("This reset link is invalid or has expired. Please request a new one.")
-        } else {
-          setSessionReady(true)
-        }
-      })
-    } else {
-      // Check if user already has a valid session
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session) {
-          setSessionReady(true)
-        } else {
-          setErr("This reset link is invalid or has expired. Please request a new one.")
-        }
-      })
-    }
-  }, [])
+  if (!hash || !hash.includes('access_token')) {
+    // No token in URL — check if we already have a valid session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setSessionReady(true)
+      } else {
+        setErr("This reset link is invalid or has expired. Please request a new one.")
+      }
+    })
+    return
+  }
+
+  // Parse the hash parameters
+  // Remove the leading # first
+  const params = new URLSearchParams(hash.substring(1))
+  const accessToken = params.get('access_token')
+  const refreshToken = params.get('refresh_token')
+  const type = params.get('type')
+
+  if (type === 'recovery' && accessToken) {
+    // Set the session using the tokens from the URL
+    supabase.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken || '',
+    }).then(({ data, error }) => {
+      if (error) {
+        console.log('Session error:', error)
+        setErr("This reset link has expired. Please request a new one.")
+      } else if (data.session) {
+        setSessionReady(true)
+        // Clear the tokens from the URL for security
+        window.history.replaceState({}, '', window.location.pathname)
+      }
+    })
+  } else {
+    setErr("This reset link is invalid. Please request a new one.")
+  }
+}, [])
 
   const submit = async () => {
     if (!password || !confirm) {
@@ -114,7 +126,7 @@ export default function ResetPasswordPage({ setPage }) {
       <div style={{ width: "100%", maxWidth: 420 }}>
         <div style={{ textAlign: "center", marginBottom: 28 }}>
           <button
-            onClick={() => setPage('home')}
+           onClick={() => window.history.back()}
             style={{ background: "none", border: "none", cursor: "pointer", marginBottom: 22 }}
           >
             <Logo size="lg" />
