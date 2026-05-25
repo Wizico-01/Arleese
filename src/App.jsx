@@ -14,62 +14,63 @@ import ResetPasswordPage from './pages/ResetPasswordPage'
 
 export default function App() {
   const [page, setPage] = useState(() => {
-  const hash = window.location.hash.replace('#', '').split('?')[0].split('&')[0]
-  const validPages = ['home', 'browse', 'login', 'register', 'dashboard', 'profile', 'terms', 'saved']
-  return validPages.includes(hash) ? hash : 'home'
-})
+    const hash = window.location.hash.replace('#', '').split('?')[0].split('&')[0]
+    // ✅ Whitelisted 'unlocked-contacts' so page state persists correctly on refresh
+    const validPages = ['home', 'browse', 'login', 'register', 'dashboard', 'profile', 'terms', 'saved', 'unlocked-contacts']
+    return validPages.includes(hash) ? hash : 'home'
+  })
   const [user, setUser] = useState(null)
   const [pageHistory, setPageHistory] = useState(['home'])
 
   useEffect(() => {
-  // STEP 1: Check for password recovery token in URL
-  const urlParams = new URLSearchParams(window.location.search)
-  const hashString = window.location.hash
+    // STEP 1: Check for password recovery token in URL
+    const urlParams = new URLSearchParams(window.location.search)
+    const hashString = window.location.hash
 
-  if (
-    hashString.includes('type=recovery') ||
-    hashString.includes('access_token') ||
-    urlParams.get('type') === 'recovery'
-  ) {
-    setPage('reset-password')
-    return
-  }
-
-  // STEP 2: Load session
-  supabase.auth.getSession().then(({ data: { session } }) => {
-    if (session) {
-      supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', session.user.id)
-        .single()
-        .then(({ data: profile }) => {
-          if (profile) {
-            setUser({
-              id: session.user.id,
-              email: session.user.email,
-              name: profile.full_name,
-              role: profile.role,
-              verified: profile.nin_verified,
-            })
-          }
-        })
-    }
-  })
-
-  // STEP 3: Listen for PASSWORD_RECOVERY event
-  const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-    if (event === 'PASSWORD_RECOVERY') {
+    if (
+      hashString.includes('type=recovery') ||
+      hashString.includes('access_token') ||
+      urlParams.get('type') === 'recovery'
+    ) {
       setPage('reset-password')
       return
     }
-    if (!session) {
-      setUser(null)
-    }
-  })
 
-  return () => subscription.unsubscribe()
-}, [])
+    // STEP 2: Load session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single()
+          .then(({ data: profile }) => {
+            if (profile) {
+              setUser({
+                id: session.user.id,
+                email: session.user.email,
+                name: profile.full_name,
+                role: profile.role,
+                verified: profile.nin_verified,
+              })
+            }
+          })
+      }
+    })
+
+    // STEP 3: Listen for PASSWORD_RECOVERY event
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setPage('reset-password')
+        return
+      }
+      if (!session) {
+        setUser(null)
+      }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
 
   // Handle browser back button
   useEffect(() => {
@@ -110,6 +111,8 @@ export default function App() {
       case 'browse':            return <BrowsePage user={user} setPage={navigateTo} />
       case 'dashboard':         return <DashboardPage user={user} setPage={navigateTo} />
       case 'saved':             return <TenantDashboard user={user} setPage={navigateTo} />
+      // ✅ Added immediate redirect route handling to map directly into the Tenant dashboard interface
+      case 'unlocked-contacts': return <TenantDashboard user={user} setPage={navigateTo} defaultTab="unlocked" />
       case 'terms':             return <TermsPage setPage={navigateTo} />
       case 'profile':           return <ProfilePage user={user} setPage={navigateTo} logout={logout} />
       case 'reset-password':    return <ResetPasswordPage setPage={navigateTo} />

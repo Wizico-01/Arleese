@@ -32,7 +32,7 @@ export default function Navbar({ user, setPage, logout, page }) {
         </button>
 
         {/* RIGHT SIDE */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           {!user ? (
             <>
               <button
@@ -60,23 +60,45 @@ export default function Navbar({ user, setPage, logout, page }) {
               </button>
             </>
           ) : (
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
               <button
                 onClick={() => setPage('browse')}
                 style={{
                   background: "none", border: "none",
-                  color: "#6b7280", fontSize: "0.85rem",
+                  color: page === 'browse' ? "#0d1b5e" : "#6b7280", 
+                  fontSize: "0.85rem",
+                  fontWeight: page === 'browse' ? 700 : 500,
                   cursor: "pointer",
                 }}
               >
                 Browse
               </button>
+
+              {/* ✅ SHOW UNLOCKED TAB FOR TENANTS ONLY */}
+              {user?.role !== 'landlord' && (
+                <button
+                  onClick={() => setPage('unlocked-contacts')}
+                  style={{
+                    background: "none", border: "none",
+                    color: (page === 'unlocked-contacts' || page === 'saved') ? "#0d1b5e" : "#6b7280", 
+                    fontSize: "0.85rem",
+                    fontWeight: (page === 'unlocked-contacts' || page === 'saved') ? 700 : 500,
+                    cursor: "pointer",
+                  }}
+                >
+                  Unlocked
+                </button>
+              )}
+
+              {/* SHOW DASHBOARD TAB FOR LANDLORDS ONLY */}
               {user?.role === 'landlord' && (
                 <button
                   onClick={() => setPage('dashboard')}
                   style={{
                     background: "none", border: "none",
-                    color: "#6b7280", fontSize: "0.85rem",
+                    color: page === 'dashboard' ? "#0d1b5e" : "#6b7280", 
+                    fontSize: "0.85rem",
+                    fontWeight: page === 'dashboard' ? 700 : 500,
                     cursor: "pointer",
                   }}
                 >

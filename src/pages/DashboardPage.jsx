@@ -3,7 +3,6 @@ import { supabase } from '../lib/supabase'
 import { Btn, Card, Badge } from '../components/UI'
 import { Ic, I } from '../components/Icons'
 import AddListingForm from './AddListingForm'
-// Added Eye and PhoneCall to the Lucide imports
 import { Building2, CheckCircle2, Key, Unlock, AlertTriangle, Eye, PhoneCall } from 'lucide-react'
 
 export default function DashboardPage({ user, setPage }) {
@@ -13,37 +12,62 @@ export default function DashboardPage({ user, setPage }) {
   const [showRentedBox, setShowRentedBox] = useState({})
   const [showAdd, setShowAdd] = useState(false)
   const [listings, setListings] = useState([])
+  const [totalUnlocks, setTotalUnlocks] = useState(0) // ✅ Track global unlock tally for metrics card
 
   useEffect(() => {
-  const fetchMyListings = async () => {
-    if (!user?.id) return
+    const fetchMyListings = async () => {
+      if (!user?.id) return
 
-    const { data, error } = await supabase
-      .from('listings')
-      .select('*')
-      .eq('landlord_id', user.id)
-      .order('created_at', { ascending: false })
+      // 1. Pull core listings belonging to this specific landlord account
+      const { data: listingsData, error: listingsError } = await supabase
+        .from('listings')
+        .select('*')
+        .eq('landlord_id', user.id)
+        .order('created_at', { ascending: false })
 
-    if (error) {
-      console.log('Dashboard fetch error:', error)
-      return
+      if (listingsError) {
+        console.log('Dashboard fetch error:', listingsError)
+        return
+      }
+
+      if (!listingsData || listingsData.length === 0) {
+        setListings([])
+        setTotalUnlocks(0)
+        return
+      }
+
+      const listingIds = listingsData.map(l => l.id)
+
+      // 2. Fetch all real-time matching entries inside the unlocks database ledger
+      const { data: unlocksData, error: unlocksError } = await supabase
+        .from('unlocks')
+        .select('listing_id')
+        .in('listing_id', listingIds)
+
+      if (unlocksError) {
+        console.log('Error fetching unlocks count tracking data:', unlocksError)
+        setListings(listingsData)
+        return
+      }
+
+      // 3. Map aggregates dynamically across individual listings
+      const updatedListings = listingsData.map(item => {
+        const itemUnlocksCount = unlocksData.filter(u => u.listing_id === item.id).length
+        return {
+          ...item,
+          unlocks: itemUnlocksCount // Overrides fallback to display accurate ledger count
+        }
+      })
+
+      setListings(updatedListings)
+      setTotalUnlocks(unlocksData.length) // Synchronize live totals card count
     }
-    if (data) setListings(data)
 
-    // Separately count total unlocks for all landlord listings
-    const { count } = await supabase
-      .from('unlocks')
-      .select('id', { count: 'exact' })
-      .in('listing_id', data?.map(l => l.id) || [])
-
-    // Store total unlocks count separately if needed
-    console.log('Total unlocks:', count)
-  }
-
-  fetchMyListings()
-}, [user])
+    fetchMyListings()
+  }, [user])
 
   const remove = (id) => setListings(l => l.filter(x => x.id !== id))
+  
   const toggleRentedBox = (id) => {
     setShowRentedBox(p => ({ ...p, [id]: !p[id] }))
     setRentedInput(p => ({ ...p, [id]: "" }))
@@ -51,54 +75,53 @@ export default function DashboardPage({ user, setPage }) {
   }
 
   const confirmRented = async (id) => {
-  const typed = rentedInput[id]?.trim().toUpperCase()
-  if (typed !== "RENTED") {
-    setRentedError(p => ({
-      ...p,
-      [id]: 'Type exactly "RENTED" in capital letters to confirm.'
-    }))
-    return
-  }
-
-  try {
-    // Save to Supabase
-    const { error } = await supabase
-      .from('listings')
-      .update({ status: 'rented' })
-      .eq('id', id)
-
-    if (error) {
-      setRentedError(p => ({ ...p, [id]: 'Failed to update. Please try again.' }))
+    const typed = rentedInput[id]?.trim().toUpperCase()
+    if (typed !== "RENTED") {
+      setRentedError(p => ({
+        ...p,
+        [id]: 'Type exactly "RENTED" in capital letters to confirm.'
+      }))
       return
     }
 
-    // Update local state
-    setListings(p => p.map(l =>
-      l.id === id ? { ...l, status: "rented" } : l
-    ))
-    setShowRentedBox(p => ({ ...p, [id]: false }))
-    setRentedInput(p => ({ ...p, [id]: "" }))
-    setRentedError(p => ({ ...p, [id]: "" }))
+    try {
+      const { error } = await supabase
+        .from('listings')
+        .update({ status: 'rented' })
+        .eq('id', id)
 
-  } catch (e) {
-    setRentedError(p => ({ ...p, [id]: 'Something went wrong. Try again.' }))
+      if (error) {
+        setRentedError(p => ({ ...p, [id]: 'Failed to update. Please try again.' }))
+        return
+      }
+
+      setListings(p => p.map(l =>
+        l.id === id ? { ...l, status: "rented" } : l
+      ))
+      setShowRentedBox(p => ({ ...p, [id]: false }))
+      setRentedInput(p => ({ ...p, [id]: "" }))
+      setRentedError(p => ({ ...p, [id]: "" }))
+
+    } catch (e) {
+      setRentedError(p => ({ ...p, [id]: 'Something went wrong. Try again.' }))
+    }
   }
-}
 
   const markAvailable = async (id) => {
-  try {
-    await supabase
-      .from('listings')
-      .update({ status: 'active' })
-      .eq('id', id)
+    try {
+      await supabase
+        .from('listings')
+        .update({ status: 'active' })
+        .eq('id', id)
 
-    setListings(p => p.map(l =>
-      l.id === id ? { ...l, status: "active" } : l
-    ))
-  } catch (e) {
-    console.log('Error marking available:', e)
+      setListings(p => p.map(l =>
+        l.id === id ? { ...l, status: "active" } : l
+      ))
+    } catch (e) {
+      console.log('Error marking available:', e)
+    }
   }
-}
+
   const add = (l) => {
     setListings(p => [...p, {
       ...l,
@@ -111,11 +134,11 @@ export default function DashboardPage({ user, setPage }) {
   }
 
   const stats = [
-  { icon: <Building2 size={26} strokeWidth={1.5} style={{ color: "#0d1b5e" }} />, l: "Total Listings", v: listings.length },
-  { icon: <CheckCircle2 size={26} strokeWidth={1.5} style={{ color: "#0d1b5e" }} />, l: "Active", v: listings.filter(l => l.status === "active").length },
-  { icon: <Key size={26} strokeWidth={1.5} style={{ color: "#0d1b5e" }} />, l: "Rented Out", v: listings.filter(l => l.status === "rented").length },
-  { icon: <Unlock size={26} strokeWidth={1.5} style={{ color: "#0d1b5e" }} />, l: "Contacts Unlocked", v: listings.reduce((s, l) => s + (Number(l.unlocks) || 0), 0) },
-]
+    { icon: <Building2 size={26} strokeWidth={1.5} style={{ color: "#0d1b5e" }} />, l: "Total Listings", v: listings.length },
+    { icon: <CheckCircle2 size={26} strokeWidth={1.5} style={{ color: "#0d1b5e" }} />, l: "Active", v: listings.filter(l => l.status === "active").length },
+    { icon: <Key size={26} strokeWidth={1.5} style={{ color: "#0d1b5e" }} />, l: "Rented Out", v: listings.filter(l => l.status === "rented").length },
+    { icon: <Unlock size={26} strokeWidth={1.5} style={{ color: "#0d1b5e" }} />, l: "Contacts Unlocked", v: totalUnlocks }, // ✅ Populated directly from verified backend hook state
+  ]
 
   if (showAdd) return <AddListingForm onBack={() => setShowAdd(false)} onSubmit={add} user={user} />
 
@@ -186,12 +209,12 @@ export default function DashboardPage({ user, setPage }) {
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               {listings.map(l => (
                 <Card key={l.id} style={{ overflow: "hidden" }}>
-                   <img
-                      src={l.images?.[0] || l.img || ""}
-                      alt={l.title}
-                      style={{ width: "100%", height: 160, objectFit: "cover", display: "block" }}
-                      />
-                      <div style={{ padding: "14px 16px" }}>
+                  <img
+                    src={l.images?.[0] || l.img || ""}
+                    alt={l.title}
+                    style={{ width: "100%", height: 160, objectFit: "cover", display: "block" }}
+                  />
+                  <div style={{ padding: "14px 16px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
                       <div>
                         <div style={{ marginBottom: 5 }}>
@@ -221,13 +244,12 @@ export default function DashboardPage({ user, setPage }) {
                       </div>
                     </div>
                     
-                    {/* UPDATED: Emojis completely replaced with matching muted line-art vector row */}
                     <div style={{ display: "flex", gap: 18, marginBottom: 12, flexWrap: "wrap", alignItems: "center" }}>
                       <span style={{ fontSize: "0.76rem", color: "#6b7280", display: "inline-flex", alignItems: "center", gap: 4 }}>
-                        <Eye size={13} strokeWidth={1.8} style={{ color: "#6b7280" }} /> {l.views} views
+                        <Eye size={13} strokeWidth={1.8} style={{ color: "#6b7280" }} /> {l.views || 0} views
                       </span>
                       <span style={{ fontSize: "0.76rem", color: "#6b7280", display: "inline-flex", alignItems: "center", gap: 4 }}>
-                        <PhoneCall size={12} strokeWidth={1.8} style={{ color: "#6b7280" }} /> {l.unlocks} unlocks
+                        <PhoneCall size={12} strokeWidth={1.8} style={{ color: "#6b7280" }} /> {l.unlocks || 0} unlocks
                       </span>
                       <span style={{ fontSize: "0.76rem", color: "#6b7280" }}>
                         {l.beds} beds · {l.baths} baths · {l.size}
@@ -235,7 +257,6 @@ export default function DashboardPage({ user, setPage }) {
                     </div>
 
                     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-
                       {/* ACTION BUTTONS ROW */}
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                         <Btn variant="secondary" sm>
@@ -321,7 +342,6 @@ export default function DashboardPage({ user, setPage }) {
                           )}
                         </div>
                       )}
-
                     </div>
                   </div>
                 </Card>

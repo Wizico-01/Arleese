@@ -43,7 +43,6 @@ export default function LoginPage({ setPage, setUser }) {
         .single()
 
       if (profileError || !profile) {
-        // Profile not found, use basic user info
         setUser({ 
           id: data.user.id,
           name: data.user.email.split('@')[0], 
@@ -66,7 +65,6 @@ export default function LoginPage({ setPage, setUser }) {
     } catch (e) {
       setErr("Connection failed. Check your internet and try again.")
     } finally {
-      // This guarantees the loading state turns off safely no matter what route the code takes
       setLoading(false)
     }
   }
@@ -155,27 +153,14 @@ export default function LoginPage({ setPage, setUser }) {
             </div>
           </div>
 
+          {/* ✅ FIXED: Clean transition to specialized reset page context handling */}
           <div style={{ textAlign: "right", marginBottom: 18 }}>
             <span
-  style={{ fontSize: "0.78rem", color: "#1e3db5", cursor: "pointer" }}
-  onClick={async () => {
-    if (!email) {
-      setErr("Enter your email address above first, then click Forgot password.")
-      return
-    }
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: 'https://arleese.vercel.app/#reset-password',
-    })
-    if (error) {
-      setErr(error.message)
-    } else {
-      setErr("")
-      alert("Password reset email sent! Check your inbox and follow the link to reset your password.")
-    }
-  }}
->
-  Forgot password?
-</span>
+              style={{ fontSize: "0.78rem", color: "#1e3db5", cursor: "pointer", fontWeight: 500 }}
+              onClick={() => setPage('reset-password')}
+            >
+              Forgot password?
+            </span>
           </div>
 
           <Btn full onClick={submit} disabled={loading}>
@@ -188,7 +173,7 @@ export default function LoginPage({ setPage, setUser }) {
             <div style={{ flex: 1, height: 1, background: "#e5e7eb" }} />
           </div>
 
-          <p style={{ textAlign: "center", fontSize: "0.84rem", color: "#6b7280" }}>
+          <p style={{ textalign: "center", fontSize: "0.84rem", color: "#6b7280" }}>
             Don't have an account?{" "}
             <span
               style={{ color: "#1e3db5", fontWeight: 600, cursor: "pointer" }}
