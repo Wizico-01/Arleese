@@ -4,53 +4,16 @@ import { Card, Badge } from '../components/UI'
 import { Ic, I } from '../components/Icons'
 
 export default function ProfilePage({ user, setPage, logout }) {
-  const [unlocks, setUnlocks] = useState([])
   const [listings, setListings] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // FIXED: Wrapped the asynchronous queries inside an explicit, valid inner async function block
     const fetchData = async () => {
       if (!user) return
       
       setLoading(true)
       try {
-        // TENANT FETCH ROUTE
-        if (user.role === 'tenant') {
-          const { data, error } = await supabase
-            .from('unlocks')
-            .select(`
-              id,
-              amount,
-              payment_method,
-              paid_at,
-              listing_id,
-              listings (
-                id,
-                title,
-                area,
-                state,
-                price,
-                images
-              )
-            `)
-            .eq('tenant_id', user.id)
-            .order('paid_at', { ascending: false })
-
-          // DIAGNOSTICS LOGGING ADDED HERE
-          console.log('Unlocks data:', data)
-          console.log('Unlocks error:', error)
-
-          if (error) {
-            console.log('Unlocks error stringified:', JSON.stringify(error))
-          }
-          if (data) {
-            console.log('Unlocks found:', data.length)
-            setUnlocks(data)
-          }
-        }
-
-        // LANDLORD FETCH ROUTE
+        // ✅ Only fetch data here if the logged-in user is a Landlord
         if (user.role === 'landlord') {
           const { data, error } = await supabase
             .from('listings')
@@ -79,7 +42,6 @@ export default function ProfilePage({ user, setPage, logout }) {
       justifyContent: "center", padding: 24,
       flexDirection: "column", gap: 16,
     }}>
-      {/* CUSTOMIZED: Swapped user silhouette emoji with brand vector icon */}
       <div style={{ color: "#0d1b5e", marginBottom: 8 }}>
         <Ic d={I.user} s={44} />
       </div>
@@ -138,7 +100,6 @@ export default function ProfilePage({ user, setPage, logout }) {
             color={user.role === 'landlord' ? "#fde047" : "#7eb3ff"}
             bg="rgba(255,255,255,.1)"
           >
-            {/* CUSTOMIZED: Clean typography styling layout matches */}
             {user.role === 'landlord' ? 'Landlord' : 'Tenant'}
           </Badge>
         </div>
@@ -146,100 +107,17 @@ export default function ProfilePage({ user, setPage, logout }) {
 
       <div style={{ padding: "20px 16px" }}>
 
-        {loading && (
+        {loading && user.role === 'landlord' && (
           <div style={{ textAlign: "center", padding: "32px 0", color: "#9ca3af", fontSize: "0.88rem" }}>
             Loading metrics...
           </div>
         )}
 
-        {/* TENANT VIEW PORTAL */}
+        {/* ✅ TENANT VIEW PORTAL: Unlocked contacts section has been removed entirely from here */}
         {!loading && user.role === 'tenant' && (
-          <div>
-            <h3 style={{
-              fontWeight: 700, color: "#0d1b5e",
-              fontSize: "1rem", marginBottom: 14,
-            }}>
-              My Unlocked Contacts ({unlocks.length})
-            </h3>
-
-            {unlocks.length === 0 ? (
-              <Card style={{ padding: 28, textAlign: "center" }}>
-                {/* CUSTOMIZED: Swapped padlock emoji with clean layout lock vector */}
-                <div style={{ color: "#9ca3af", marginBottom: 12, display: "flex", justifyContent: "center" }}>
-                  <Ic d={I.lock} s={32} />
-                </div>
-                <p style={{ color: "#6b7280", fontSize: "0.85rem", marginBottom: 16 }}>
-                  You have not unlocked any landlord contacts yet.
-                </p>
-                <button onClick={() => setPage('browse')} style={{
-                  background: "#0d1b5e", color: "#fff", border: "none",
-                  borderRadius: 8, padding: "10px 20px", cursor: "pointer",
-                  fontSize: "0.85rem", fontWeight: 600, fontFamily: "inherit",
-                }}>
-                  Browse Apartments
-                </button>
-              </Card>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                {unlocks.map(u => (
-                  <Card key={u.id} style={{ overflow: "hidden" }}>
-                    {u.listings?.images?.[0] && (
-                      <img
-                        src={u.listings.images[0]}
-                        alt={u.listings?.title}
-                        style={{ width: "100%", height: 130, objectFit: "cover", display: "block" }}
-                      />
-                    )}
-                    <div style={{ padding: "12px 14px" }}>
-                      <h4 style={{
-                        fontFamily: "'DM Serif Display', serif",
-                        color: "#0d1b5e", fontSize: "0.95rem", marginBottom: 4,
-                      }}>
-                        {u.listings?.title || "Apartment"}
-                      </h4>
-                      <p style={{ color: "#6b7280", fontSize: "0.78rem", marginBottom: 10, display: "flex", alignItems: "center", gap: 4 }}>
-                        <Ic d={I.pin} s={12} /> {u.listings?.area}, {u.listings?.state}
-                      </p>
-
-                      {/* LANDLORD CONTACT BOX */}
-                      <div style={{
-                        background: "#f0f7ff",
-                        borderRadius: 10, padding: "12px 14px",
-                        marginBottom: 10,
-                      }}>
-                        <p style={{
-                          fontSize: "0.7rem", fontWeight: 700,
-                          color: "#9ca3af", letterSpacing: "0.06em",
-                          marginBottom: 8,
-                        }}>
-                          LANDLORD CONTACT
-                        </p>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                          <span style={{ fontSize: "0.86rem", color: "#0d1b5e", fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
-                            <Ic d={I.mail} s={12} /> {u.landlord_phone || "Contact saved — check your email"}
-                          </span>
-                          <span style={{ fontSize: "0.86rem", color: "#0d1b5e", display: "flex", alignItems: "center", gap: 6 }}>
-                            <Ic d={I.pin} s={12} /> {u.listings?.area}, {u.listings?.state}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <Badge color="#166534" bg="#dcfce7">
-                          Paid ₦{u.amount?.toLocaleString()}
-                        </Badge>
-                        <span style={{ fontSize: "0.72rem", color: "#9ca3af" }}>
-                          {new Date(u.paid_at).toLocaleDateString('en-NG', {
-                            day: 'numeric', month: 'short', year: 'numeric'
-                          })}
-                        </span>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </div>
+          <Card style={{ padding: 20, textAlign: "center", color: "#6b7280", fontSize: "0.88rem" }}>
+            <p>Welcome to your Arleece account profile space.</p>
+          </Card>
         )}
 
         {/* LANDLORD VIEW PORTAL */}
@@ -268,7 +146,6 @@ export default function ProfilePage({ user, setPage, logout }) {
 
             {listings.length === 0 ? (
               <Card style={{ padding: 28, textAlign: "center" }}>
-                {/* CUSTOMIZED: Swapped house emoji with vector system icon */}
                 <div style={{ color: "#9ca3af", marginBottom: 12, display: "flex", justifyContent: "center" }}>
                   <Ic d={I.home} s={32} />
                 </div>

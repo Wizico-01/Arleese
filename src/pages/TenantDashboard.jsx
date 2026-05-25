@@ -9,7 +9,6 @@ export default function TenantDashboard({ user, setPage }) {
 
   useEffect(() => {
     const fetchUnlocks = async () => {
-      // Safety check: ensure user object is populated
       if (!user?.id) {
         setLoading(false)
         return
@@ -17,7 +16,7 @@ export default function TenantDashboard({ user, setPage }) {
       setLoading(true)
       
       try {
-        // ✅ Relational select to grab the unlocked properties along with landlord profile details
+        // ✅ Fetches the listings AND the matching Landlord profiles instantly
         const { data, error } = await supabase
           .from('unlocks')
           .select(`
@@ -37,12 +36,12 @@ export default function TenantDashboard({ user, setPage }) {
           .order('created_at', { ascending: false })
 
         if (error) {
-          console.error('Error fetching unlocks data:', error.message)
+          console.error('Error fetching unlocks:', error.message)
         } else if (data) {
           setUnlocks(data)
         }
       } catch (err) {
-        console.error('Unexpected dashboard fetch block:', err)
+        console.error('Dashboard fetch error:', err)
       } finally {
         setLoading(false)
       }
@@ -54,7 +53,7 @@ export default function TenantDashboard({ user, setPage }) {
   return (
     <div style={{ background: "#f4f3ef", minHeight: "100vh", paddingBottom: 80 }}>
 
-      {/* HEADER SECTION */}
+      {/* HEADER */}
       <div style={{
         background: "linear-gradient(135deg,#060e33,#0d1b5e)",
         padding: "34px 20px 26px",
@@ -70,7 +69,7 @@ export default function TenantDashboard({ user, setPage }) {
         </p>
       </div>
 
-      {/* RENDER SPACE */}
+      {/* CONTENT AREA */}
       <div style={{ padding: "20px 16px" }}>
         {loading ? (
           <div style={{ textAlign: "center", padding: "48px 0", color: "#9ca3af" }}>
@@ -83,7 +82,7 @@ export default function TenantDashboard({ user, setPage }) {
               No unlocked contacts yet
             </p>
             <p style={{ color: "#9ca3af", fontSize: "0.85rem" }}>
-              Browse apartments and pay to unlock a landlord's contact details instantly here.
+              Browse apartments and pay ₦200 to unlock a landlord's contact instantly here.
             </p>
           </div>
         ) : (
@@ -92,14 +91,14 @@ export default function TenantDashboard({ user, setPage }) {
               const listing = u.listings
               const landlordProfile = listing?.profiles
 
-              // Safeguard strings if database values are still loading
+              // Fallbacks if data profiles are empty
               const landlordName = landlordProfile?.full_name || "Verified Landlord"
               const landlordPhone = landlordProfile?.phone || "No phone listed"
               const displayPrice = listing?.price ? listing.price.toLocaleString() : "0"
 
               return (
                 <Card key={u.id} style={{ overflow: "hidden", borderRadius: 12, border: "1px solid #e5e7eb" }}>
-                  {/* APARTMENT COVER IMAGE */}
+                  {/* IMAGE */}
                   {listing?.images?.[0] && (
                     <img
                       src={listing.images[0]}
@@ -125,7 +124,7 @@ export default function TenantDashboard({ user, setPage }) {
                       {listing?.area || "N/A"}, {listing?.state || ""}
                     </div>
 
-                    {/* RENDER UNLOCKED LANDLORD CARD DETAILS */}
+                    {/* ✅ DISPLAY REAL LANDLORD INFO DIRECTLY - NO EMAIL TEXT */}
                     <div style={{
                       background: "#f0f4ff",
                       borderRadius: 10,
@@ -147,12 +146,12 @@ export default function TenantDashboard({ user, setPage }) {
                         flexDirection: "column", gap: 6,
                       }}>
                         <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                          👤 Name: <strong style={{ color: "#1e293b" }}>{landlordName}</strong>
+                          👤 Name: <span style={{ color: "#1e293b", fontWeight: 700 }}>{landlordName}</span>
                         </span>
                         
-                        {/* Interactive Click-to-Call connection */}
+                        {/* Tap to Call directly from the dashboard */}
                         <a href={`tel:${landlordPhone}`} style={{ textDecoration: "none", color: "#0d1b5e", display: "flex", alignItems: "center", gap: 6 }}>
-                          📞 Phone: <strong style={{ color: "#2563eb", textDecoration: "underline" }}>{landlordPhone}</strong>
+                          📞 Phone: <span style={{ color: "#2563eb", textDecoration: "underline", fontWeight: 700 }}>{landlordPhone}</span>
                         </a>
                         
                         <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.82rem", color: "#4b5563", fontWeight: 400 }}>
@@ -169,7 +168,7 @@ export default function TenantDashboard({ user, setPage }) {
                       paddingTop: 12
                     }}>
                       <Badge color="#166534" bg="#dcfce7">
-                        ✅ Access Active
+                        ✅ Paid ₦200
                       </Badge>
                       <span style={{ fontSize: "0.72rem", color: "#9ca3af" }}>
                         {new Date(u.created_at || Date.now()).toLocaleDateString('en-NG', {
