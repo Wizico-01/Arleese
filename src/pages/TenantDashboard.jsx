@@ -10,20 +10,41 @@ export default function TenantDashboard({ user, setPage }) {
   useEffect(() => {
     const fetchUnlocks = async () => {
       if (!user?.id) return
-      const { data } = await supabase
-        .from('unlocks')
-        .select(`
-          *,
-          listings (
-            id, title, area, state, price,
-            beds, baths, size, images, type
-          )
-        `)
-        .eq('tenant_id', user.id)
-        .order('paid_at', { ascending: false })
-      if (data) setUnlocks(data)
-      setLoading(false)
+      setLoading(true)
+      
+      try {
+        // ✅ FIXED: Deep relational select to pull listing data AND landlord profile contacts seamlessly
+        const { data, error } = await supabase
+          .from('unlocks')
+          .select(`
+            id,
+            created_at,
+            listing_id,
+            listings (
+              id, title, area, state, price,
+              beds, baths, size, images, type, landlord_id,
+              profiles:landlord_id (
+                full_name,
+                phone
+              )
+            )
+          `)
+          .eq('tenant_id', user.id)
+          // Using created_at fallback to prevent ordering bugs
+          .order('created_at', { ascending: false })
+
+        if (error) {
+          console.error('Error fetching unlocks:', error)
+        } else if (data) {
+          setUnlocks(data)
+        }
+      } catch (err) {
+        console.error('Unexpected error:', err)
+      } finally {
+        setLoading(false)
+      }
     }
+    
     fetchUnlocks()
   }, [user])
 
@@ -63,74 +84,92 @@ export default function TenantDashboard({ user, setPage }) {
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {unlocks.map(u => (
-              <Card key={u.id} style={{ overflow: "hidden" }}>
-                {/* APARTMENT IMAGE */}
-                {u.listings?.images?.[0] && (
-                  <img
-                    src={u.listings.images[0]}
-                    alt={u.listings?.title}
-                    style={{ width: "100%", height: 160, objectFit: "cover" }}
-                  />
-                )}
-                <div style={{ padding: "14px 16px" }}>
-                  <h3 style={{
-                    fontFamily: "'DM Serif Display',serif",
-                    fontSize: "1rem", color: "#0d1b5e", marginBottom: 4,
-                  }}>
-                    {u.listings?.title}
-                  </h3>
-                  <div style={{
-                    display: "flex", gap: 4,
-                    color: "#6b7280", fontSize: "0.76rem",
-                    alignItems: "center", marginBottom: 10,
-                  }}>
-                    <Ic d={I.pin} s={12} />
-                    {u.listings?.area}, {u.listings?.state}
-                  </div>
+            {unlocks.map(u => {
+              // Extract the nested profiles metadata smoothly safely
+              const listing = u.listings
+              const landlordProfile = listing?.profiles
 
-                  {/* LANDLORD CONTACT */}
-                  <div style={{
-                    background: "#f0f4ff",
-                    borderRadius: 10,
-                    padding: "12px 14px",
-                    marginBottom: 10,
-                  }}>
-                    <p style={{
-                      fontSize: "0.7rem", fontWeight: 700,
-                      color: "#9ca3af", letterSpacing: "0.05em",
-                      marginBottom: 6,
+              // Fallback calculations if custom data is pending sync mapping
+              const landlordName = landlordProfile?.full_name || "Verified Landlord"
+              const landlordPhone = landlordProfile?.phone || "No phone listed"
+              const displayPrice = listing?.price ? listing.price.toLocaleString() : "0"
+
+              return (
+                <Card key={u.id} style={{ overflow: "hidden" }}>
+                  {/* APARTMENT IMAGE */}
+                  {listing?.images?.[0] && (
+                    <img
+                      src={listing.images[0]}
+                      alt={listing?.title}
+                      style={{ width: "100%", height: 160, objectFit: "cover" }}
+                    />
+                  )}
+                  <div style={{ padding: "14px 16px" }}>
+                    <h3 style={{
+                      fontFamily: "'DM Serif Display',serif",
+                      fontSize: "1rem", color: "#0d1b5e", marginBottom: 4,
                     }}>
-                      LANDLORD CONTACT
-                    </p>
+                      {listing?.title || "Apartment Listing"}
+                    </h3>
                     <div style={{
-                      fontSize: "0.88rem", fontWeight: 600,
-                      color: "#0d1b5e", display: "flex",
-                      flexDirection: "column", gap: 4,
+                      display: "flex", gap: 4,
+                      color: "#6b7280", fontSize: "0.76rem",
+                      alignItems: "center", marginBottom: 10,
                     }}>
-                      <span>📞 {u.landlord_phone || "+234 801 234 5678"}</span>
-                      <span>👤 {u.landlord_name || "Contact saved"}</span>
-                      <span>📍 {u.listings?.area}, {u.listings?.state}</span>
+                      <Ic d={I.pin} s={12} />
+                      {listing?.area || "N/A"}, {listing?.state || ""}
+                    </div>
+
+                    {/* LANDLORD CONTACT CONTAINER */}
+                    <div style={{
+                      background: "#f0f4ff",
+                      borderRadius: 10,
+                      padding: "12px 14px",
+                      marginBottom: 10,
+                    }}>
+                      <p style={{
+                        fontSize: "0.7rem", fontWeight: 700,
+                        color: "#9ca3af", letterSpacing: "0.05em",
+                        marginBottom: 6,
+                      }}>
+                        LANDLORD CONTACT
+                      </p>
+                      <div style={{
+                        fontSize: "0.88rem", fontWeight: 600,
+                        color: "#0d1b5e", display: "flex",
+                        flexDirection: "column", gap: 4,
+                      }}>
+                        {/* ✅ TRIGGER DEEP TELEPHONE CALL LINK DIRECTLY */}
+                        <a href={`tel:${landlordPhone}`} style={{ textDecoration: "none", color: "#0d1b5e", display: "flex", alignItems: "center", gap: 6 }}>
+                          📞 {landlordPhone}
+                        </a>
+                        <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          👤 {landlordName}
+                        </span>
+                        <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.8rem", color: "#4b5563", fontWeight: 400 }}>
+                          💰 ₦{displayPrice}/year
+                        </span>
+                      </div>
+                    </div>
+
+                    <div style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}>
+                      <Badge color="#166534" bg="#dcfce7">
+                        ✅ Access Unlocked
+                      </Badge>
+                      <span style={{ fontSize: "0.72rem", color: "#9ca3af" }}>
+                        {new Date(u.created_at || Date.now()).toLocaleDateString('en-NG', {
+                          day: 'numeric', month: 'short', year: 'numeric'
+                        })}
+                      </span>
                     </div>
                   </div>
-
-                  <div style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}>
-                    <Badge color="#166534" bg="#dcfce7">
-                      ✅ Paid ₦{u.amount?.toLocaleString()}
-                    </Badge>
-                    <span style={{ fontSize: "0.72rem", color: "#9ca3af" }}>
-                      {new Date(u.paid_at).toLocaleDateString('en-NG', {
-                        day: 'numeric', month: 'short', year: 'numeric'
-                      })}
-                    </span>
-                  </div>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              )
+            })}
           </div>
         )}
       </div>

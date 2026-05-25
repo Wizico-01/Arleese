@@ -15,15 +15,15 @@ import ResetPasswordPage from './pages/ResetPasswordPage'
 export default function App() {
   const [page, setPage] = useState(() => {
     const hash = window.location.hash.replace('#', '').split('?')[0].split('&')[0]
-    // ✅ Whitelisted 'unlocked-contacts' so page state persists correctly on refresh
-    const validPages = ['home', 'browse', 'login', 'register', 'dashboard', 'profile', 'terms', 'saved', 'unlocked-contacts']
+    // ✅ FIXED: Whitelisted 'reset-password' so the hash parsing hook doesn't boot you to home!
+    const validPages = ['home', 'browse', 'login', 'register', 'dashboard', 'profile', 'terms', 'saved', 'unlocked-contacts', 'reset-password']
     return validPages.includes(hash) ? hash : 'home'
   })
   const [user, setUser] = useState(null)
   const [pageHistory, setPageHistory] = useState(['home'])
 
   useEffect(() => {
-    // STEP 1: Check for password recovery token in URL
+    // STEP 1: Check for password recovery token in URL right away
     const urlParams = new URLSearchParams(window.location.search)
     const hashString = window.location.hash
 
@@ -33,11 +33,15 @@ export default function App() {
       urlParams.get('type') === 'recovery'
     ) {
       setPage('reset-password')
+      window.location.hash = 'reset-password'
       return
     }
 
-    // STEP 2: Load session
+    // STEP 2: Load running user session profile details
     supabase.auth.getSession().then(({ data: { session } }) => {
+      // If we are dealing with an inbound recovery hash, halt database loading to prevent layout shifting
+      if (window.location.hash.includes('access_token')) return
+
       if (session) {
         supabase
           .from('profiles')
@@ -58,13 +62,37 @@ export default function App() {
       }
     })
 
-    // STEP 3: Listen for PASSWORD_RECOVERY event
+    // STEP 3: Handle global Auth triggers cleanly
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
         setPage('reset-password')
+        window.location.hash = 'reset-password'
         return
       }
-      if (!session) {
+      
+      if (event === 'SIGNED_IN' && session) {
+        // Prevent profile query overrides if running an active link sync
+        if (window.location.hash.includes('reset-password')) return
+
+        supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single()
+          .then(({ data: profile }) => {
+            if (profile) {
+              setUser({
+                id: session.user.id,
+                email: session.user.email,
+                name: profile.full_name,
+                role: profile.role,
+                verified: profile.nin_verified,
+              })
+            }
+          })
+      }
+
+      if (event === 'SIGNED_OUT') {
         setUser(null)
       }
     })
@@ -111,7 +139,6 @@ export default function App() {
       case 'browse':            return <BrowsePage user={user} setPage={navigateTo} />
       case 'dashboard':         return <DashboardPage user={user} setPage={navigateTo} />
       case 'saved':             return <TenantDashboard user={user} setPage={navigateTo} />
-      // ✅ Added immediate redirect route handling to map directly into the Tenant dashboard interface
       case 'unlocked-contacts': return <TenantDashboard user={user} setPage={navigateTo} defaultTab="unlocked" />
       case 'terms':             return <TermsPage setPage={navigateTo} />
       case 'profile':           return <ProfilePage user={user} setPage={navigateTo} logout={logout} />
@@ -120,8 +147,8 @@ export default function App() {
     }
   }
 
-  const hideNav    = ['login', 'register', 'register-landlord'].includes(page)
-  const hideBottom = ['login', 'register', 'register-landlord'].includes(page)
+  const hideNav    = ['login', 'register', 'register-landlord', 'reset-password'].includes(page)
+  const hideBottom = ['login', 'register', 'register-landlord', 'reset-password'].includes(page)
 
   return (
     <div style={{
