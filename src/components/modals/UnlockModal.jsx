@@ -62,10 +62,12 @@ export default function UnlockModal({ listing: l, onClose, user, setPage }) {
     setDone(true)
   }
 
-  // Save unlock registration to database, then route the user instantly
+  // Save unlock registration to database, then show them details right here!
   const saveUnlockAndShow = async (paymentRef, paymentMethod) => {
     setLoading(true)
     try {
+      const currentTimestamp = new Date().toISOString()
+
       const { error } = await supabase
         .from('unlocks')
         .insert({
@@ -74,27 +76,22 @@ export default function UnlockModal({ listing: l, onClose, user, setPage }) {
           amount: 200,
           payment_method: paymentMethod,
           payment_ref: paymentRef,
+          paid_at: currentTimestamp,    // Keeps consistency with old code
+          created_at: currentTimestamp, // Feeds dashboard engine filters instantly
         })
 
       if (error) {
-        // If already unlocked (duplicate prevention), pull info and redirect
+        // If already unlocked (duplicate prevention), pull info to view immediately
         if (error.code === '23505') {
           await fetchAndShowContact()
-          if (setPage) setPage('unlocked-contacts')
-          onClose()
           return
         }
         setErr(`Failed to save record: ${error.message}`)
         return
       }
 
+      // Fetch contact criteria and pull up success state card inside modal window
       await fetchAndShowContact()
-      
-      // Smooth handoff: Redirect directly to the Saved/Unlocked page list
-      if (setPage) {
-        setPage('unlocked-contacts')
-      }
-      onClose() // Closes modal layer gracefully
 
     } catch (e) {
       setErr("Payment received, but your profile unlock log lagged. Please reach out to Arleece support.")
@@ -134,6 +131,14 @@ export default function UnlockModal({ listing: l, onClose, user, setPage }) {
     await saveUnlockAndShow(`MANUAL-${Date.now()}`, 'bank_transfer')
   }
 
+  // Handle final finish button tap inside the inline card context layer
+  const handleFinalizeClose = () => {
+    if (setPage) {
+      setPage('unlocked-contacts') // Smooth redirect back to updated profile directory dashboard
+    }
+    onClose()
+  }
+
   return (
     <div
       style={{
@@ -167,7 +172,7 @@ export default function UnlockModal({ listing: l, onClose, user, setPage }) {
           <Ic d={I.x} s={15} />
         </button>
 
-        {/* ── SUCCESS STATE PANEL ── */}
+        {/* ── SUCCESS STATE PANEL (Now stays open for instant viewing) ── */}
         {done && unlockedContact && (
           <div style={{ textAlign: "center" }}>
             <div style={{
@@ -254,7 +259,7 @@ export default function UnlockModal({ listing: l, onClose, user, setPage }) {
               ✅ This contact has been added to your profile roster. Access it anytime on your Saved dashboard.
             </div>
 
-            <Btn full onClick={onClose}>Done</Btn>
+            <Btn full onClick={handleFinalizeClose}>View in Dashboard</Btn>
           </div>
         )}
 
