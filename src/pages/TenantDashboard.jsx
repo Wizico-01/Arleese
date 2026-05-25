@@ -16,17 +16,17 @@ export default function TenantDashboard({ user, setPage }) {
       setLoading(true)
       
       try {
-        // ✅ Fetches the listings AND the matching Landlord profiles instantly
+        // ✅ DEEP PRODUCTION RELATION JOIN: Links unlocks -> listings -> profiles via strict inner constraints
         const { data, error } = await supabase
           .from('unlocks')
           .select(`
             id,
             created_at,
             listing_id,
-            listings (
+            listings!inner (
               id, title, area, state, price,
               beds, baths, size, images, type, landlord_id,
-              profiles:landlord_id (
+              profiles!inner (
                 full_name,
                 phone
               )
@@ -48,7 +48,7 @@ export default function TenantDashboard({ user, setPage }) {
     }
     
     fetchUnlocks()
-  }, [user])
+  }, [user?.id]) // Optimized dependency array targeting the primitive user.id string
 
   return (
     <div style={{ background: "#f4f3ef", minHeight: "100vh", paddingBottom: 80 }}>
@@ -88,8 +88,8 @@ export default function TenantDashboard({ user, setPage }) {
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {unlocks.map(u => {
-              const listing = u.listings
-              const landlordProfile = listing?.profiles
+              const listing = u.listings || {}
+              const landlordProfile = listing?.profiles || {}
 
               // Fallbacks if data profiles are empty
               const landlordName = landlordProfile?.full_name || "Verified Landlord"
@@ -97,7 +97,7 @@ export default function TenantDashboard({ user, setPage }) {
               const displayPrice = listing?.price ? listing.price.toLocaleString() : "0"
 
               return (
-                <Card key={u.id} style={{ overflow: "hidden", borderRadius: 12, border: "1px solid #e5e7eb" }}>
+                <Card key={u.id} style={{ overflow: "hidden", borderRadius: 12, border: "1px solid #e5e7eb", background: "#fff" }}>
                   {/* IMAGE */}
                   {listing?.images?.[0] && (
                     <img
