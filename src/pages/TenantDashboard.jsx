@@ -16,29 +16,59 @@ export default function TenantDashboard({ user, setPage }) {
       setLoading(true)
       
       try {
-        // ✅ DEEP PRODUCTION RELATION JOIN: Links unlocks -> listings -> profiles via strict inner constraints
-        const { data, error } = await supabase
+        // STEP 1: Fetch the unlocks and matching listings data cleanly
+        const { data: unlockData, error: unlockError } = await supabase
           .from('unlocks')
           .select(`
             id,
             created_at,
             listing_id,
-            listings!inner (
+            listings (
               id, title, area, state, price,
-              beds, baths, size, images, type, landlord_id,
-              profiles!inner (
-                full_name,
-                phone
-              )
+              beds, baths, size, images, type, landlord_id
             )
           `)
           .eq('tenant_id', user.id)
           .order('created_at', { ascending: false })
 
-        if (error) {
-          console.error('Error fetching unlocks:', error.message)
-        } else if (data) {
-          setUnlocks(data)
+        if (unlockError) {
+          console.error('Error fetching unlocks:', unlockError.message)
+          setLoading(false)
+          return
+        }
+
+        if (unlockData && unlockData.length > 0) {
+          // STEP 2: Gather all unique landlord IDs from the listings loaded
+          const landlordIds = unlockData
+            .map(u => u.listings?.landlord_id)
+            .filter(id => id)
+
+          if (landlordIds.length > 0) {
+            // STEP 3: Query the profiles table explicitly for these specific IDs
+            const { data: profileData, error: profileError } = await supabase
+              .from('profiles')
+              .select('id, full_name, phone')
+              .in('id', landlordIds)
+
+            if (!profileError && profileData) {
+              // STEP 4: Merge the matching profile record right back into our frontend object layout
+              const combinedData = unlockData.map(u => {
+                const matchProfile = profileData.find(p => p.id === u.listings?.landlord_id)
+                return {
+                  ...u,
+                  listings: {
+                    ...u.listings,
+                    profiles: matchProfile || null
+                  }
+                }
+              })
+              setUnlocks(combinedData)
+              return
+            }
+          }
+          setUnlocks(unlockData)
+        } else {
+          setUnlocks([])
         }
       } catch (err) {
         console.error('Dashboard fetch error:', err)
@@ -48,7 +78,7 @@ export default function TenantDashboard({ user, setPage }) {
     }
     
     fetchUnlocks()
-  }, [user?.id]) // Optimized dependency array targeting the primitive user.id string
+  }, [user?.id])
 
   return (
     <div style={{ background: "#f4f3ef", minHeight: "100vh", paddingBottom: 80 }}>
@@ -88,10 +118,10 @@ export default function TenantDashboard({ user, setPage }) {
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {unlocks.map(u => {
-              const listing = u.listings || {}
-              const landlordProfile = listing?.profiles || {}
+              const listing = u.listings
+              const landlordProfile = listing?.profiles
 
-              // Fallbacks if data profiles are empty
+              // Extracted direct profile variables with bulletproof safe-checks
               const landlordName = landlordProfile?.full_name || "Verified Landlord"
               const landlordPhone = landlordProfile?.phone || "No phone listed"
               const displayPrice = listing?.price ? listing.price.toLocaleString() : "0"
