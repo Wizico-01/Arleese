@@ -15,7 +15,6 @@ export default function TenantDashboard({ user, setPage }) {
   const fetchUnlocks = async () => {
     setLoading(true)
     try {
-      // Clean single network call replacing the former multi-step state mapping
       const { data, error } = await supabase
         .from('unlocks')
         .select(`
@@ -32,7 +31,7 @@ export default function TenantDashboard({ user, setPage }) {
             images,
             landlord_phone,
             landlord_address,
-            profiles!inner (
+            profiles (
               full_name,
               phone
             )
@@ -116,12 +115,14 @@ export default function TenantDashboard({ user, setPage }) {
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {unlocks.map(u => {
-              const listing = u.listings
+              // Exact structural workaround protecting both standard objects and array wrappers
+              const listing = Array.isArray(u.listings) ? u.listings[0] : u.listings
+              const profile = Array.isArray(listing?.profiles) ? listing?.profiles[0] : listing?.profiles
               
-              // Fallback logic resolving explicit over profile records safely
-              const phone = listing?.landlord_phone || listing?.profiles?.phone || null
+              // Safe contextual evaluation variables
+              const phone = listing?.landlord_phone || profile?.phone || null
               const address = listing?.landlord_address || `${listing?.area || 'N/A'}, ${listing?.state || ''}`
-              const landlordName = listing?.profiles?.full_name || "Verified Landlord"
+              const landlordName = profile?.full_name || "Verified Landlord"
               const displayPrice = listing?.price ? listing.price.toLocaleString() : "0"
 
               return (
