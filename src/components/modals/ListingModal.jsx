@@ -8,57 +8,59 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
   const [showFullImg, setShowFullImg] = useState(false)
 
   // ┌────────────────────────────────────────────────────────┐
-  // │ INTEGRATED PAYSTACK FRONTEND PAYMENT PROCESSOR          │
+  // │ STANDALONE DATABASE SAVER FUNCTION                     │
+  // └────────────────────────────────────────────────────────┘
+  const saveUnlockToDatabase = async (referenceId) => {
+    try {
+      const { error } = await supabase
+        .from('unlocks')
+        .insert([
+          {
+            tenant_id: user.id,
+            listing_id: l.id,
+            amount: 200,
+            paid_at: new Date().toISOString(),
+            payment_method: 'paystack'
+          }
+        ]);
+
+      if (error) {
+        console.error('Database entry write block:', error.message);
+        alert('Payment cleared, but registration failed. Ref: ' + referenceId);
+      } else {
+        if (typeof onClose === 'function') onClose(); 
+        if (typeof setPage === 'function') setPage('dashboard'); 
+      }
+    } catch (catchErr) {
+      console.error('Error executing unlock initialization workflow:', catchErr);
+    }
+  };
+
+  // ┌────────────────────────────────────────────────────────┐
+  // │ OPTIMIZED ERROR-FREE PAYSTACK RUNTIME TRIGGER          │
   // └────────────────────────────────────────────────────────┘
   const handlePayment = () => {
-    // 1. Safety check ensuring user payload context exists before initialization
     if (!user?.id || !user?.email) {
       alert("Please sign in to unlock this contact.");
       if (typeof setPage === 'function') setPage('login');
       return;
     }
 
-    // 2. Check if Paystack script loaded on the window object safely
     if (!window.PaystackPop) {
-      alert("Paystack payment engine is still loading. Please refresh your page and try again.");
+      alert("Paystack engine loading. Please refresh your page.");
       return;
     }
 
     try {
       const handler = window.PaystackPop.setup({
-        key: 'pk_live_7e4040d2bf01ea308dfc657c49dc25k', // Your Live Public Key
+        key: 'pk_live_7e4040d2bf01ea308dfc657c49dc25k', 
         email: user.email,
-        amount: 20000, // ₦200 scaled to kobo units
+        amount: 20000, // ₦200 in kobo
         currency: 'NGN',
         
-        callback: async function(response) {
+        callback: function(response) {
           console.log('Payment Approved. Reference ID:', response.reference);
-
-          try {
-            // Direct insert structure targeting unlocks
-            const { error } = await supabase
-              .from('unlocks')
-              .insert([
-                {
-                  tenant_id: user.id,
-                  listing_id: l.id,
-                  amount: 200,
-                  paid_at: new Date().toISOString(),
-                  payment_method: 'paystack'
-                }
-              ]);
-
-            if (error) {
-              console.error('Database entry write block:', error.message);
-              alert('Payment cleared, but registration failed: ' + response.reference);
-            } else {
-              // Success workflow completion routing
-              if (typeof onClose === 'function') onClose(); 
-              if (typeof setPage === 'function') setPage('dashboard'); 
-            }
-          } catch (catchErr) {
-            console.error('Error executing unlock initialization workflow:', catchErr);
-          }
+          saveUnlockToDatabase(response.reference);
         },
         onClose: function() {
           alert('Transaction cancelled. Your contact details remain hidden.');
@@ -307,7 +309,7 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
                     One-time ₦200 fee. No agent. No recurring charges.
                   </div>
                 </div>
-                {/* Cleaned up button trigger linked to the frontend handler */}
+                {/* Linked button handler */}
                 <Btn onClick={handlePayment}>
                   <Ic d={I.lock} s={14} /> Unlock for ₦200
                 </Btn>
