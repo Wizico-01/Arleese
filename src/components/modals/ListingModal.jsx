@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { supabase } from '../lib/supabase' // Added your Supabase client connection
+import { supabase } from '../../lib/supabase'
 import { Ic, I } from '../Icons'
 import { Btn, Badge } from '../UI'
 
