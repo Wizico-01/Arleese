@@ -11,7 +11,8 @@ export default function AddListingForm({ onBack, onSubmit, user }) {
   const [form, setForm] = useState({
   title: "", type: "", state: "", area: "",
   price: "", kitchs: "", baths: "",
-  desc: "", amenities: [], images: [], imageFiles: [],
+  desc: "", landlord_phone: "", landlord_address: "",
+  amenities: [], images: [], imageFiles: [],
   videos: [], videoFiles: [],
 })
   const imgRef = useRef()
@@ -26,12 +27,17 @@ export default function AddListingForm({ onBack, onSubmit, user }) {
   }
 
   const validateStep1 = () => {
-    if (!form.title || !form.type || !form.state || !form.area || !form.price) {
-      setErr("Please fill all required fields."); return false
-    }
-    setErr(""); return true
+  if (!form.title || !form.type || !form.state || !form.area || !form.price) {
+    setErr("Please fill all required fields."); return false
   }
-
+  if (!form.landlord_phone) {
+    setErr("Please add your phone number so tenants can contact you."); return false
+  }
+  if (!form.landlord_address) {
+    setErr("Please add the exact property address."); return false
+  }
+  setErr(""); return true
+}
   const validateStep2 = () => {
   if (!form.kitchs || !form.baths) {
     setErr("Please specify kitchen and bathrooms."); return false
@@ -79,20 +85,22 @@ for (const vidFile of form.videoFiles || []) {
 
       // Save listing to database
       const { data, error } = await supabase.from('listings').insert({
-        title: form.title,
-        type: form.type,
-        state: form.state,
-        area: form.area,
-        price: Number(form.price),
-        kitchs: Number(form.kitchs),
-        baths: Number(form.baths),
-        description: form.desc,
-        amenities: form.amenities,
-        images: imageUrls,
-        videos: videoUrls,
-        status: 'active',
-        landlord_id: user.id,
-})
+          title: form.title,
+          type: form.type,
+          state: form.state,
+          area: form.area,
+          price: Number(form.price),
+          kitchs: Number(form.kitchs),
+          baths: Number(form.baths),
+          description: form.desc,
+          landlord_phone: form.landlord_phone,
+          landlord_address: form.landlord_address,
+          amenities: form.amenities,
+          images: imageUrls,
+          videos: videoUrls,
+          status: 'active',
+          landlord_id: user.id,
+        })
 
       if (error) {
         setErr(error.message)
@@ -297,6 +305,25 @@ for (const vidFile of form.videoFiles || []) {
                 onChange={e => set("desc", e.target.value)}
                 rows={4}
               />
+
+              <Field
+               label="Your Phone Number"
+               placeholder="e.g. 08012345678"
+               type="tel"
+               value={form.landlord_phone}
+               onChange={e => set("landlord_phone", e.target.value)}
+               required
+               note="Tenants will see this after paying ₦200 unlock fee."
+               />
+
+              <Field
+               label="Exact Property Address"
+               placeholder="e.g. 14B Harmony Close, Lekki Phase 1, Lagos"
+               value={form.landlord_address}
+               onChange={e => set("landlord_address", e.target.value)}
+               required
+              note="Full address shown to tenants after they unlock contact."
+               />
 
               <Btn full onClick={() => { if (validateStep1()) setStep(2) }}>
                 Continue →
@@ -609,6 +636,8 @@ for (const vidFile of form.videoFiles || []) {
                   ["Bathrooms", form.baths || "—"],
                   ["Photos", `${form.images.length} uploaded`],
                   ["Videos", form.videos.length > 0 ? `${form.videos.length} uploaded` : "None"],
+                  ["Phone", form.landlord_phone || "—"],
+                  ["Address", form.landlord_address || "—"],
                   ["Amenities", form.amenities.length > 0
                     ? `${form.amenities.length} selected`
                     : "None"],

@@ -30,8 +30,11 @@ export default function UnlockModal({ listing: l, onClose, user, setPage }) {
       const { data: listing, error: listingError } = await supabase
         .from('listings')
         .select(`
-          *,
-          profiles (
+          landlord_phone,
+          landlord_address,
+          area,
+          state,
+          profiles!inner (
             full_name,
             phone
           )
@@ -41,15 +44,16 @@ export default function UnlockModal({ listing: l, onClose, user, setPage }) {
 
       if (listingError || !listing) {
         setUnlockedContact({
-          landlord: listing?.profiles?.full_name || "Property Owner",
-          phone: listing?.profiles?.phone || "Contact via Arleece support",
+          landlord: "Property Owner",
+          phone: "Contact via Arleece support",
           address: `${l.area}, ${l.state}`,
         })
       } else {
+        // ✅ FIXED: Now dynamically renders the verified address instead of hardcoding area literals
         setUnlockedContact({
           landlord: listing.profiles?.full_name || "Property Owner",
-          phone: listing.profiles?.phone || "Contact via Arleece support",
-          address: `${l.area}, ${l.state}`,
+          phone: listing.landlord_phone || listing.profiles?.phone || "Contact via Arleece support",
+          address: listing.landlord_address || `${listing.area}, ${listing.state}`,
         })
       }
     } catch (e) {
@@ -172,7 +176,7 @@ export default function UnlockModal({ listing: l, onClose, user, setPage }) {
           <Ic d={I.x} s={15} />
         </button>
 
-        {/* ── SUCCESS STATE PANEL (Now stays open for instant viewing) ── */}
+        {/* ── SUCCESS STATE PANEL ── */}
         {done && unlockedContact && (
           <div style={{ textAlign: "center" }}>
             <div style={{

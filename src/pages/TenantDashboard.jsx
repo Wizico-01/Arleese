@@ -8,77 +8,75 @@ export default function TenantDashboard({ user, setPage }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const fetchUnlocks = async () => {
-      if (!user?.id) {
-        setLoading(false)
-        return
-      }
-      setLoading(true)
-      
-      try {
-        // STEP 1: Fetch the unlocks and matching listings data cleanly
-        const { data: unlockData, error: unlockError } = await supabase
-          .from('unlocks')
-          .select(`
-            id,
-            created_at,
-            listing_id,
-            listings (
-              id, title, area, state, price,
-              beds, baths, size, images, type, landlord_id
-            )
-          `)
-          .eq('tenant_id', user.id)
-          .order('created_at', { ascending: false })
-
-        if (unlockError) {
-          console.error('Error fetching unlocks:', unlockError.message)
-          setLoading(false)
-          return
-        }
-
-        if (unlockData && unlockData.length > 0) {
-          // STEP 2: Gather all unique landlord IDs from the listings loaded
-          const landlordIds = unlockData
-            .map(u => u.listings?.landlord_id)
-            .filter(id => id)
-
-          if (landlordIds.length > 0) {
-            // STEP 3: Query the profiles table explicitly for these specific IDs
-            const { data: profileData, error: profileError } = await supabase
-              .from('profiles')
-              .select('id, full_name, phone')
-              .in('id', landlordIds)
-
-            if (!profileError && profileData) {
-              // STEP 4: Merge the matching profile record right back into our frontend object layout
-              const combinedData = unlockData.map(u => {
-                const matchProfile = profileData.find(p => p.id === u.listings?.landlord_id)
-                return {
-                  ...u,
-                  listings: {
-                    ...u.listings,
-                    profiles: matchProfile || null
-                  }
-                }
-              })
-              setUnlocks(combinedData)
-              return
-            }
-          }
-          setUnlocks(unlockData)
-        } else {
-          setUnlocks([])
-        }
-      } catch (err) {
-        console.error('Dashboard fetch error:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
-    
+    if (!user?.id) { setLoading(false); return }
     fetchUnlocks()
   }, [user?.id])
+
+  const fetchUnlocks = async () => {
+    setLoading(true)
+    try {
+      // Clean single network call replacing the former multi-step state mapping
+      const { data, error } = await supabase
+        .from('unlocks')
+        .select(`
+          id,
+          amount,
+          payment_method,
+          paid_at,
+          listings (
+            id,
+            title,
+            area,
+            state,
+            price,
+            images,
+            landlord_phone,
+            landlord_address,
+            profiles!inner (
+              full_name,
+              phone
+            )
+          )
+        `)
+        .eq('tenant_id', user.id)
+        .order('paid_at', { ascending: false })
+
+      if (error) {
+        console.error('Fetch error:', error.message)
+      }
+      if (data) setUnlocks(data)
+    } catch (e) {
+      console.error('Dashboard query catch:', e)
+    }
+    setLoading(false)
+  }
+
+  if (!user) return (
+    <div style={{
+      minHeight: "100vh", background: "#f4f3ef",
+      display: "flex", alignItems: "center",
+      justifyContent: "center", padding: 24,
+      flexDirection: "column", gap: 16,
+    }}>
+      <div style={{ fontSize: "3rem" }}>🔒</div>
+      <h2 style={{
+        fontFamily: "'DM Serif Display',serif",
+        color: "#0d1b5e", fontSize: "1.4rem", textAlign: "center",
+      }}>
+        Sign in to view your unlocked contacts
+      </h2>
+      <button
+        onClick={() => setPage('login')}
+        style={{
+          background: "#0d1b5e", color: "#fff", border: "none",
+          borderRadius: 9, padding: "12px 32px", cursor: "pointer",
+          fontSize: "0.9rem", fontWeight: 600, fontFamily: "inherit",
+        }}
+      >
+        Sign In
+      </button>
+    </div>
+  )
 
   return (
     <div style={{ background: "#f4f3ef", minHeight: "100vh", paddingBottom: 80 }}>
@@ -112,18 +110,18 @@ export default function TenantDashboard({ user, setPage }) {
               No unlocked contacts yet
             </p>
             <p style={{ color: "#9ca3af", fontSize: "0.85rem" }}>
-              Browse apartments and pay ₦200 to unlock a landlord's contact instantly here.
+              Browse apartments and pay ₦200 to unlock a landlord's contact instantly.
             </p>
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {unlocks.map(u => {
               const listing = u.listings
-              const landlordProfile = listing?.profiles
-
-              // Extracted direct profile variables with bulletproof safe-checks
-              const landlordName = landlordProfile?.full_name || "Verified Landlord"
-              const landlordPhone = landlordProfile?.phone || "No phone listed"
+              
+              // Fallback logic resolving explicit over profile records safely
+              const phone = listing?.landlord_phone || listing?.profiles?.phone || null
+              const address = listing?.landlord_address || `${listing?.area || 'N/A'}, ${listing?.state || ''}`
+              const landlordName = listing?.profiles?.full_name || "Verified Landlord"
               const displayPrice = listing?.price ? listing.price.toLocaleString() : "0"
 
               return (
@@ -154,7 +152,7 @@ export default function TenantDashboard({ user, setPage }) {
                       {listing?.area || "N/A"}, {listing?.state || ""}
                     </div>
 
-                    {/* ✅ DISPLAY REAL LANDLORD INFO DIRECTLY - NO EMAIL TEXT */}
+                    {/* LANDLORD SPECIFICS BOX */}
                     <div style={{
                       background: "#f0f4ff",
                       borderRadius: 10,
@@ -179,17 +177,25 @@ export default function TenantDashboard({ user, setPage }) {
                           👤 Name: <span style={{ color: "#1e293b", fontWeight: 700 }}>{landlordName}</span>
                         </span>
                         
-                        {/* Tap to Call directly from the dashboard */}
-                        <a href={`tel:${landlordPhone}`} style={{ textDecoration: "none", color: "#0d1b5e", display: "flex", alignItems: "center", gap: 6 }}>
-                          📞 Phone: <span style={{ color: "#2563eb", textDecoration: "underline", fontWeight: 700 }}>{landlordPhone}</span>
-                        </a>
+                        {phone ? (
+                          <a href={`tel:${phone}`} style={{ textDecoration: "none", color: "#0d1b5e", display: "flex", alignItems: "center", gap: 6 }}>
+                            📞 Phone: <span style={{ color: "#2563eb", textDecoration: "underline", fontWeight: 700 }}>{phone}</span>
+                          </a>
+                        ) : (
+                          <span style={{ color: "#b91c1c", fontSize: "0.85rem" }}>📞 Phone: No contact listed</span>
+                        )}
                         
-                        <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.82rem", color: "#4b5563", fontWeight: 400 }}>
+                        <span style={{ display: "flex", alignItems: "flex-start", gap: 6, fontSize: "0.85rem", color: "#4b5563", fontWeight: 400 }}>
+                          📍 Address: <span style={{ color: "#0d1b5e", fontWeight: 600 }}>{address}</span>
+                        </span>
+
+                        <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.82rem", color: "#4b5563", fontWeight: 400, marginTop: 4 }}>
                           💰 Price: ₦{displayPrice}/year
                         </span>
                       </div>
                     </div>
 
+                    {/* STATUS AND TIME BADGES */}
                     <div style={{
                       display: "flex",
                       justifyContent: "space-between",
@@ -198,10 +204,10 @@ export default function TenantDashboard({ user, setPage }) {
                       paddingTop: 12
                     }}>
                       <Badge color="#166534" bg="#dcfce7">
-                        ✅ Paid ₦200
+                        ✅ Paid ₦{(u.amount || 200).toLocaleString()}
                       </Badge>
                       <span style={{ fontSize: "0.72rem", color: "#9ca3af" }}>
-                        {new Date(u.created_at || Date.now()).toLocaleDateString('en-NG', {
+                        {new Date(u.paid_at || u.created_at || Date.now()).toLocaleDateString('en-NG', {
                           day: 'numeric', month: 'short', year: 'numeric'
                         })}
                       </span>
