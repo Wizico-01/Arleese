@@ -1,10 +1,65 @@
 import { useState } from 'react'
+import { supabase } from '../lib/supabase' // Added your Supabase client connection
 import { Ic, I } from '../Icons'
 import { Btn, Badge } from '../UI'
 
-export default function ListingModal({ listing: l, onClose, onUnlock, user, setPage }) {
+export default function ListingModal({ listing: l, onClose, user, setPage }) {
   const [mainImg, setMainImg] = useState(l.images?.[0] || l.img || "")
   const [showFullImg, setShowFullImg] = useState(false)
+
+  // ┌────────────────────────────────────────────────────────┐
+  // │ INTEGRATED PAYSTACK FRONTEND PAYMENT PROCESSOR          │
+  // └────────────────────────────────────────────────────────┘
+  const handlePayment = () => {
+    // Safety check ensuring user payload context exists before initialization
+    if (!user?.id || !user?.email) {
+      alert("Please sign in to unlock this contact.");
+      setPage('login');
+      return;
+    }
+
+    const handler = window.PaystackPop.setup({
+      key: 'pk_live_7e4040d2bf01ea308dfc657c49dc25k', // Your Live Public Key
+      email: user.email,
+      amount: 20000, // ₦200 scaled to kobo units
+      currency: 'NGN',
+      
+      callback: async function(response) {
+        console.log('Payment Approved. Reference ID:', response.reference);
+
+        try {
+          // Direct insert structure targeting unlocks
+          const { error } = await supabase
+            .from('unlocks')
+            .insert([
+              {
+                tenant_id: user.id,
+                listing_id: l.id,
+                amount: 200,
+                paid_at: new Date().toISOString(),
+                payment_method: 'paystack'
+              }
+            ]);
+
+          if (error) {
+            console.error('Database entry write block:', error.message);
+            alert('Payment cleared, but registration failed: ' + response.reference);
+          } else {
+            // Success workflow completion routing
+            onClose(); 
+            setPage('dashboard'); 
+          }
+        } catch (catchErr) {
+          console.error('Error executing unlock initialization workflow:', catchErr);
+        }
+      },
+      onClose: function() {
+        alert('Transaction cancelled. Your contact details remain hidden.');
+      }
+    });
+
+    handler.openIframe();
+  };
 
   return (
     <div
@@ -241,7 +296,8 @@ export default function ListingModal({ listing: l, onClose, onUnlock, user, setP
                     One-time ₦200 fee. No agent. No recurring charges.
                   </div>
                 </div>
-                <Btn onClick={() => { if (!user) { setPage('login') } else { onUnlock() } }}>
+                {/* Linked button directly to optimized Paystack runtime instance */}
+                <Btn onClick={() => { if (!user) { setPage('login') } else { handlePayment() } }}>
                   <Ic d={I.lock} s={14} /> Unlock for ₦200
                 </Btn>
               </div>
