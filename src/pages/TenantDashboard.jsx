@@ -31,10 +31,6 @@ export default function TenantDashboard({ user, setPage }) {
             images,
             landlord_phone,
             landlord_address,
-            profiles (
-              full_name,
-              phone
-            )
           )
         `)
         .eq('tenant_id', user.id)
