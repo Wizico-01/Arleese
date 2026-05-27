@@ -31,6 +31,10 @@ export default function TenantDashboard({ user, setPage }) {
             images,
             landlord_phone,
             landlord_address,
+            profiles (
+              full_name,
+              phone
+            )
           )
         `)
         .eq('tenant_id', user.id)
@@ -111,14 +115,11 @@ export default function TenantDashboard({ user, setPage }) {
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {unlocks.map(u => {
-              // Exact structural workaround protecting both standard objects and array wrappers
               const listing = Array.isArray(u.listings) ? u.listings[0] : u.listings
               const profile = Array.isArray(listing?.profiles) ? listing?.profiles[0] : listing?.profiles
               
-              // Safe contextual evaluation variables
               const phone = listing?.landlord_phone || profile?.phone || null
               const address = listing?.landlord_address || `${listing?.area || 'N/A'}, ${listing?.state || ''}`
-              const landlordName = profile?.full_name || "Verified Landlord"
               const displayPrice = listing?.price ? listing.price.toLocaleString() : "0"
 
               return (
@@ -149,7 +150,7 @@ export default function TenantDashboard({ user, setPage }) {
                       {listing?.area || "N/A"}, {listing?.state || ""}
                     </div>
 
-                    {/* LANDLORD SPECIFICS BOX */}
+                    {/* LANDLORD SPECIFICS BOX — CLEANED NAME FIELD REMOVED */}
                     <div style={{
                       background: "#f0f4ff",
                       borderRadius: 10,
@@ -160,7 +161,7 @@ export default function TenantDashboard({ user, setPage }) {
                       <p style={{
                         fontSize: "0.68rem", fontWeight: 700,
                         color: "#3b82f6", letterSpacing: "0.06em",
-                        marginBottom: 8,
+                        marginBottom: 10,
                       }}>
                         VERIFIED LANDLORD CONTACT
                       </p>
@@ -168,11 +169,8 @@ export default function TenantDashboard({ user, setPage }) {
                       <div style={{
                         fontSize: "0.9rem", fontWeight: 600,
                         color: "#0d1b5e", display: "flex",
-                        flexDirection: "column", gap: 6,
+                        flexDirection: "column", gap: 8,
                       }}>
-                        <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                          👤 Name: <span style={{ color: "#1e293b", fontWeight: 700 }}>{landlordName}</span>
-                        </span>
                         
                         {phone ? (
                           <a href={`tel:${phone}`} style={{ textDecoration: "none", color: "#0d1b5e", display: "flex", alignItems: "center", gap: 6 }}>
@@ -182,12 +180,12 @@ export default function TenantDashboard({ user, setPage }) {
                           <span style={{ color: "#b91c1c", fontSize: "0.85rem" }}>📞 Phone: No contact listed</span>
                         )}
                         
-                        <span style={{ display: "flex", alignItems: "flex-start", gap: 6, fontSize: "0.85rem", color: "#4b5563", fontWeight: 400 }}>
+                        <span style={{ display: "flex", alignItems: "flex-start", gap: 6, fontSize: "0.88rem", color: "#4b5563", fontWeight: 400 }}>
                           📍 Address: <span style={{ color: "#0d1b5e", fontWeight: 600 }}>{address}</span>
                         </span>
 
-                        <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.82rem", color: "#4b5563", fontWeight: 400, marginTop: 4 }}>
-                          💰 Price: ₦{displayPrice}/year
+                        <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.88rem", color: "#4b5563", fontWeight: 400 }}>
+                          💰 Price: <span style={{ color: "#0d1b5e", fontWeight: 600 }}>₦{displayPrice}/year</span>
                         </span>
                       </div>
                     </div>
