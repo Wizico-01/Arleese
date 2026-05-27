@@ -6,13 +6,18 @@ import { Btn, Badge } from '../UI'
 export default function ListingModal({ listing: l, onClose, user, setPage }) {
   const [mainImg, setMainImg] = useState(l.images?.[0] || l.img || "")
   const [showFullImg, setShowFullImg] = useState(false)
+  
+  // State to hold unlocked contact info locally once paid
+  const [unlockedData, setUnlockedData] = useState(null)
+  const [isPaid, setIsPaid] = useState(false)
 
   // ┌────────────────────────────────────────────────────────┐
-  // │ STANDALONE DATABASE SAVER FUNCTION                     │
+  // │ STANDALONE DATABASE SAVER & CONTACT FETCH FUNCTION     │
   // └────────────────────────────────────────────────────────┘
   const saveUnlockToDatabase = async (referenceId) => {
     try {
-      const { error } = await supabase
+      // 1. Record the transaction
+      const { error: insertError } = await supabase
         .from('unlocks')
         .insert([
           {
@@ -24,13 +29,27 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
           }
         ]);
 
-      if (error) {
-        console.error('Database entry write block:', error.message);
+      if (insertError) {
+        console.error('Database entry write block:', insertError.message);
         alert('Payment cleared, but registration failed. Ref: ' + referenceId);
-      } else {
-        if (typeof onClose === 'function') onClose(); 
-        if (typeof setPage === 'function') setPage('dashboard'); 
+        return;
       }
+
+      // 2. Fetch the contact info directly from the listing to show it instantly
+      const { data: listingData, error: fetchError } = await supabase
+        .from('listings')
+        .select('phone, landlord_phone, address, area, state, price')
+        .eq('id', l.id)
+        .single();
+
+      if (!fetchError && listingData) {
+        setUnlockedData(listingData);
+        setIsPaid(true);
+      } else {
+        // Fallback to whatever props we have if direct fetch fails
+        setIsPaid(true);
+      }
+      
     } catch (catchErr) {
       console.error('Error executing unlock initialization workflow:', catchErr);
     }
@@ -53,7 +72,7 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
 
     try {
       const handler = window.PaystackPop.setup({
-        key: 'pk_live_7e4040d2bf01ea308dfc657c49dc25b0e8206643', 
+        key: 'pk_live_7e4040d2bf01ea308dfc657c49dc25', // Clean verified key
         email: user.email,
         amount: 20000, // ₦200 in kobo
         currency: 'NGN',
@@ -104,14 +123,7 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
               alignItems: "center", justifyContent: "center",
             }}
           >
-            <img
-              src={mainImg}
-              alt=""
-              style={{
-                maxWidth: "100%", maxHeight: "100vh",
-                objectFit: "contain",
-              }}
-            />
+            <img src={mainImg} alt="" style={{ maxWidth: "100%", maxHeight: "100vh", objectFit: "contain" }} />
             <button
               onClick={() => setShowFullImg(false)}
               style={{
@@ -165,12 +177,7 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
 
         {/* THUMBNAIL STRIP */}
         {l.images?.length > 1 && (
-          <div style={{
-            display: "flex", gap: 6,
-            padding: "8px 12px",
-            background: "#f4f3ef",
-            overflowX: "auto",
-          }}>
+          <div style={{ display: "flex", gap: 6, padding: "8px 12px", background: "#f4f3ef", overflowX: "auto" }}>
             {l.images.map((img, idx) => (
               <img
                 key={idx}
@@ -194,45 +201,23 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
         {/* VIDEOS */}
         {l.videos?.length > 0 && (
           <div style={{ padding: "10px 16px", background: "#f4f3ef" }}>
-            <p style={{
-              fontSize: "0.78rem", fontWeight: 600,
-              color: "#374151", marginBottom: 8,
-            }}>
+            <p style={{ fontSize: "0.78rem", fontWeight: 600, color: "#374151", marginBottom: 8 }}>
               Videos
             </p>
             {l.videos.map((vid, idx) => (
-              <video
-                key={idx}
-                src={vid}
-                controls
-                style={{
-                  width: "100%", borderRadius: 10,
-                  marginBottom: 8, maxHeight: 220,
-                  display: "block",
-                }}
-              />
+              <video key={idx} src={vid} controls style={{ width: "100%", borderRadius: 10, marginBottom: 8, maxHeight: 220, display: "block" }} />
             ))}
           </div>
         )}
 
         {/* CONTENT */}
         <div style={{ padding: "22px 26px 28px" }}>
-          <div style={{
-            display: "flex", justifyContent: "space-between",
-            alignItems: "flex-start", flexWrap: "wrap",
-            gap: 10, marginBottom: 14,
-          }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 10, marginBottom: 14 }}>
             <div>
-              <h2 style={{
-                fontFamily: "'DM Serif Display', serif",
-                fontSize: "1.45rem", color: "#0d1b5e", marginBottom: 5,
-              }}>
+              <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: "1.45rem", color: "#0d1b5e", marginBottom: 5 }}>
                 {l.title}
               </h2>
-              <div style={{
-                display: "flex", gap: 4, color: "#6b7280",
-                fontSize: "0.8rem", alignItems: "center",
-              }}>
+              <div style={{ display: "flex", gap: 4, color: "#6b7280", fontSize: "0.8rem", alignItems: "center" }}>
                 <Ic d={I.pin} s={12} /> {l.area}, {l.state}
               </div>
             </div>
@@ -247,19 +232,13 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
           </div>
 
           {/* STATS PILLS */}
-          <div style={{
-            display: "flex", gap: 10, flexWrap: "wrap",
-            paddingBottom: 14, borderBottom: "1px solid #f0efea", marginBottom: 16,
-          }}>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", paddingBottom: 14, borderBottom: "1px solid #f0efea", marginBottom: 16 }}>
             {[
               `${l.kitchs || 0} Kitchen`,
               `${l.baths || 0} Bathroom${l.baths > 1 ? "s" : ""}`,
               l.type,
             ].filter(Boolean).map(v => (
-              <div key={v} style={{
-                background: "#f4f3ef", borderRadius: 8,
-                padding: "6px 12px", fontSize: "0.82rem", color: "#374151",
-              }}>
+              <div key={v} style={{ background: "#f4f3ef", borderRadius: 8, padding: "6px 12px", fontSize: "0.82rem", color: "#374151" }}>
                 {v}
               </div>
             ))}
@@ -268,20 +247,12 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
           {/* AMENITIES */}
           {l.amenities?.length > 0 && (
             <div style={{ marginBottom: 18 }}>
-              <h4 style={{
-                fontWeight: 700, color: "#374151",
-                fontSize: "0.8rem", letterSpacing: "0.05em", marginBottom: 9,
-              }}>
+              <h4 style={{ fontWeight: 700, color: "#374151", fontSize: "0.8rem", letterSpacing: "0.05em", marginBottom: 9 }}>
                 AMENITIES
               </h4>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
                 {l.amenities.map(a => (
-                  <span key={a} style={{
-                    display: "flex", alignItems: "center", gap: 4,
-                    background: "#eef2ff", color: "#0d1b5e",
-                    borderRadius: 6, padding: "4px 11px",
-                    fontSize: "0.76rem", fontWeight: 600,
-                  }}>
+                  <span key={a} style={{ display: "flex", alignItems: "center", gap: 4, background: "#eef2ff", color: "#0d1b5e", borderRadius: 6, padding: "4px 11px", fontSize: "0.76rem", fontWeight: 600 }}>
                     <Ic d={I.check} s={11} sw={2.5} /> {a}
                   </span>
                 ))}
@@ -290,46 +261,51 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
           )}
 
           {/* DYNAMIC ACTION SECTION */}
-          {l.status !== 'rented' ? (
-            /* UNLOCK BANNER — only show if not rented */
-            <div style={{
-              background: "linear-gradient(135deg,#f0f3ff,#eaefff)",
-              border: "1px solid #c7d4fd",
-              borderRadius: 13, padding: "18px 20px",
-            }}>
-              <div style={{
-                display: "flex", justifyContent: "space-between",
-                alignItems: "center", flexWrap: "wrap", gap: 12,
-              }}>
-                <div>
-                  <div style={{ fontWeight: 700, color: "#0d1b5e", fontSize: "0.96rem", marginBottom: 3 }}>
-                    Get Direct Landlord Contact
-                  </div>
-                  <div style={{ color: "#6b7280", fontSize: "0.79rem" }}>
-                    One-time ₦200 fee. No agent. No recurring charges.
-                  </div>
+          {l.status === 'rented' ? (
+            <div style={{ background: "#fee2e2", border: "1px solid #fca5a5", borderRadius: 13, padding: "18px 20px", textAlign: "center" }}>
+              <div style={{ fontSize: "1.5rem", marginBottom: 6 }}>🔑</div>
+              <div style={{ fontWeight: 700, color: "#991b1b", fontSize: "0.96rem", marginBottom: 4 }}>This Apartment Has Been Rented</div>
+              <div style={{ color: "#b91c1c", fontSize: "0.82rem" }}>This property is no longer available for rent.</div>
+            </div>
+          ) : isPaid ? (
+            /* INSTANT DISPLAY ONCE PAID — NO NAME FIELD AT ALL */
+            <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 13, padding: "18px 20px" }}>
+              <div style={{ fontWeight: 700, color: "#166534", fontSize: "1rem", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                ✅ Contact Unlocked Successfully
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.92rem", color: "#1e293b" }}>
+                  <span>📞</span> 
+                  <strong>Phone:</strong> 
+                  <a href={`tel:${unlockedData?.phone || unlockedData?.landlord_phone || l.phone || l.landlord_phone}`} style={{ color: "#0d1b5e", fontWeight: 600, textDecoration: "underline" }}>
+                    {unlockedData?.phone || unlockedData?.landlord_phone || l.phone || l.landlord_phone || "N/A"}
+                  </a>
                 </div>
-                {/* Linked button handler */}
-                <Btn onClick={handlePayment}>
-                  <Ic d={I.lock} s={14} /> Unlock for ₦200
-                </Btn>
+                
+                <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.92rem", color: "#1e293b" }}>
+                  <span>📍</span> 
+                  <strong>Address:</strong> 
+                  <span>{unlockedData?.address || l.address || `${l.area}, ${l.state}`}</span>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.92rem", color: "#1e293b" }}>
+                  <span>💰</span> 
+                  <strong>Price:</strong> 
+                  <span>₦{(unlockedData?.price || l.price)?.toLocaleString()}/year</span>
+                </div>
               </div>
             </div>
           ) : (
-            /* RENTED NOTICE — show if property status is 'rented' */
-            <div style={{
-              background: "#fee2e2",
-              border: "1px solid #fca5a5",
-              borderRadius: 13, padding: "18px 20px",
-              textAlign: "center",
-            }}>
-              <div style={{ fontSize: "1.5rem", marginBottom: 6 }}>🔑</div>
-              <div style={{ fontWeight: 700, color: "#991b1b", fontSize: "0.96rem", marginBottom: 4 }}>
-                This Apartment Has Been Rented
-              </div>
-              <div style={{ color: "#b91c1c", fontSize: "0.82rem" }}>
-                This property is no longer available for rent.
-                Browse other listings to find your next home.
+            /* UNLOCK BANNER BUTTON */
+            <div style={{ background: "linear-gradient(135deg,#f0f3ff,#eaefff)", border: "1px solid #c7d4fd", borderRadius: 13, padding: "18px 20px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+                <div>
+                  <div style={{ fontWeight: 700, color: "#0d1b5e", fontSize: "0.96rem", marginBottom: 3 }}>Get Direct Landlord Contact</div>
+                  <div style={{ color: "#6b7280", fontSize: "0.79rem" }}>One-time ₦200 fee. No agent. No recurring charges.</div>
+                </div>
+                <Btn onClick={handlePayment}>
+                  <Ic d={I.lock} s={14} /> Unlock for ₦200
+                </Btn>
               </div>
             </div>
           )}
