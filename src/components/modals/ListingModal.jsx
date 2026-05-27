@@ -53,7 +53,7 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
 
     try {
       const handler = window.PaystackPop.setup({
-        key: 'pk_live_7e4040d2bf01ea308dfc657c49dc25k', 
+        key: 'pk_live_7e4040d2bf01ea308dfc657c49dc25b0e8206643', 
         email: user.email,
         amount: 20000, // ₦200 in kobo
         currency: 'NGN',
