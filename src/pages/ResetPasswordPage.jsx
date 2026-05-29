@@ -62,7 +62,7 @@ export default function ResetPasswordPage({ setPage }) {
 
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: 'http://localhost:5173/#reset-password',
+        redirectTo: 'https://arleese.vercel.app/#reset-password',
       })
       if (error) {
         setErr(error.message)
