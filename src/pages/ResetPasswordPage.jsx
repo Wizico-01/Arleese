@@ -5,7 +5,7 @@ import { Btn, Field, Card, ErrBox } from '../components/UI'
 import { Ic, I } from '../components/Icons'
 
 export default function ResetPasswordPage({ setPage }) {
-  const [email, setEmail] = useState("") // Added for email collection
+  const [email, setEmail] = useState("") 
   const [password, setPassword] = useState("")
   const [confirm, setConfirm] = useState("")
   const [showPw, setShowPw] = useState(false)
@@ -13,13 +13,19 @@ export default function ResetPasswordPage({ setPage }) {
   const [err, setErr] = useState("")
   const [success, setSuccess] = useState(false)
   const [sessionReady, setSessionReady] = useState(false)
-  const [emailSent, setEmailSent] = useState(false) // Tracking email dispatch status
+  const [emailSent, setEmailSent] = useState(false) 
 
   useEffect(() => {
-    const hash = window.location.hash
+    // 1. Look for the token in BOTH the normal URL parameters and the hash string
+    const urlParams = new URLSearchParams(window.location.search)
+    const hashParams = new URLSearchParams(window.location.hash.substring(1))
+    
+    const accessToken = urlParams.get('access_token') || hashParams.get('access_token')
+    const refreshToken = urlParams.get('refresh_token') || hashParams.get('refresh_token')
+    const type = urlParams.get('type') || hashParams.get('type')
 
-    if (!hash || !hash.includes('access_token')) {
-      // No token in URL — check if we have an active session active already
+    // 2. If there is no token anywhere, check if a valid session is already active
+    if (!accessToken) {
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session) {
           setSessionReady(true)
@@ -28,12 +34,7 @@ export default function ResetPasswordPage({ setPage }) {
       return
     }
 
-    // Parse the hash parameters
-    const params = new URLSearchParams(hash.substring(1))
-    const accessToken = params.get('access_token')
-    const refreshToken = params.get('refresh_token')
-    const type = params.get('type')
-
+    // 3. If it's a password recovery token, catch it and activate the session
     if (type === 'recovery' && accessToken) {
       supabase.auth.setSession({
         access_token: accessToken,
@@ -41,10 +42,10 @@ export default function ResetPasswordPage({ setPage }) {
       }).then(({ data, error }) => {
         if (error) {
           console.log('Session error:', error)
-          setErr("This reset link has expired. Please request a new one.")
+          setErr("This reset link has expired or is invalid. Please request a new one.")
         } else if (data.session) {
           setSessionReady(true)
-          // Clear tokens out safely from view parameters
+          // Clean the URL parameters out safely from view
           window.history.replaceState({}, '', window.location.pathname + '#reset-password')
         }
       })
@@ -61,6 +62,9 @@ export default function ResetPasswordPage({ setPage }) {
     setErr("")
 
     try {
+      // Force clear any stale tokens blocking the pipeline
+      await supabase.auth.signOut()
+
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: 'https://arleese.vercel.app/#reset-password',
       })
@@ -153,7 +157,6 @@ export default function ResetPasswordPage({ setPage }) {
           {/* DYNAMIC FORM SWITCHING */}
           {!sessionReady ? (
             <>
-              {/* If no auth token is found, show the standard request input trigger */}
               <Field
                 label="Email Address"
                 type="email"
@@ -169,7 +172,6 @@ export default function ResetPasswordPage({ setPage }) {
             </>
           ) : (
             <>
-              {/* Show password fields ONLY when Supabase sets a valid recovery session */}
               <div style={{ marginBottom: 18 }}>
                 <label style={{ display: "block", fontSize: "0.79rem", fontWeight: 600, color: "#4b5563", marginBottom: 6 }}>
                   New Password <span style={{ color: "#b91c1c" }}>*</span>
