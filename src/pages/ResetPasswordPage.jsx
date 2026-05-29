@@ -16,39 +16,27 @@ export default function ResetPasswordPage({ setPage }) {
   const [emailSent, setEmailSent] = useState(false) 
 
   useEffect(() => {
-    // 1. Look for the token in BOTH the normal URL parameters and the hash string
-    const urlParams = new URLSearchParams(window.location.search)
-    const hashParams = new URLSearchParams(window.location.hash.substring(1))
-    
-    const accessToken = urlParams.get('access_token') || hashParams.get('access_token')
-    const refreshToken = urlParams.get('refresh_token') || hashParams.get('refresh_token')
-    const type = urlParams.get('type') || hashParams.get('type')
+    // 1. Listen directly to Supabase's authentication event listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("Auth Event Triggered:", event)
+      
+      // If the user clicked a recovery link, or already has an active authenticated session
+      if (event === 'PASSWORD_RECOVERY' || session) {
+        setSessionReady(true)
+        // Clean up the URL parameters globally from the window view
+        window.history.replaceState({}, '', window.location.pathname + '#reset-password')
+      }
+    })
 
-    // 2. If there is no token anywhere, check if a valid session is already active
-    if (!accessToken) {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session) {
-          setSessionReady(true)
-        }
-      })
-      return
-    }
+    // 2. Backup check: see if a session is already parsed locally on load
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setSessionReady(true)
+      }
+    })
 
-    // 3. If it's a password recovery token, catch it and activate the session
-    if (type === 'recovery' && accessToken) {
-      supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken || '',
-      }).then(({ data, error }) => {
-        if (error) {
-          console.log('Session error:', error)
-          setErr("This reset link has expired or is invalid. Please request a new one.")
-        } else if (data.session) {
-          setSessionReady(true)
-          // Clean the URL parameters out safely from view
-          window.history.replaceState({}, '', window.location.pathname + '#reset-password')
-        }
-      })
+    return () => {
+      subscription.unsubscribe()
     }
   }, [])
 
@@ -62,7 +50,7 @@ export default function ResetPasswordPage({ setPage }) {
     setErr("")
 
     try {
-      // Force clear any stale tokens blocking the pipeline
+      // Clear any stale local sessions to ensure a fresh handshake
       await supabase.auth.signOut()
 
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -101,6 +89,8 @@ export default function ResetPasswordPage({ setPage }) {
         setErr(error.message)
       } else {
         setSuccess(true)
+        // Sign out immediately so they have to log back in with the new password
+        await supabase.auth.signOut()
       }
     } catch (e) {
       setErr("Something went wrong. Please try again.")
@@ -219,6 +209,7 @@ export default function ResetPasswordPage({ setPage }) {
               Back to Login
             </Btn>
           </div>
+          
         </Card>
       </div>
     </div>
