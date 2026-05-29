@@ -14,33 +14,28 @@ import ResetPasswordPage from './pages/ResetPasswordPage'
 
 export default function App() {
   const [page, setPage] = useState(() => {
-    const hash = window.location.hash.replace('#', '').split('?')[0].split('&')[0]
-    // ✅ FIXED: Whitelisted 'reset-password' so the hash parsing hook doesn't boot you to home!
+    // Check if a recovery signature exists anywhere in the initial URL structure
+    const searchString = window.location.search || ''
+    const hashString = window.location.hash || ''
+    const hasRecoveryToken = searchString.includes('access_token') || hashString.includes('access_token') || searchString.includes('type=recovery') || hashString.includes('type=recovery')
+
+    if (hasRecoveryToken) {
+      return 'reset-password'
+    }
+
+    const hash = hashString.replace('#', '').split('?')[0].split('&')[0]
     const validPages = ['home', 'browse', 'login', 'register', 'dashboard', 'profile', 'terms', 'saved', 'unlocked-contacts', 'reset-password']
     return validPages.includes(hash) ? hash : 'home'
   })
+  
   const [user, setUser] = useState(null)
   const [pageHistory, setPageHistory] = useState(['home'])
 
   useEffect(() => {
-    // STEP 1: Check for password recovery token in URL right away
-    const urlParams = new URLSearchParams(window.location.search)
-    const hashString = window.location.hash
-
-    if (
-      hashString.includes('type=recovery') ||
-      hashString.includes('access_token') ||
-      urlParams.get('type') === 'recovery'
-    ) {
-      setPage('reset-password')
-      window.location.hash = 'reset-password'
-      return
-    }
-
-    // STEP 2: Load running user session profile details
+    // STEP 1: Process running user profile details safely
     supabase.auth.getSession().then(({ data: { session } }) => {
-      // If we are dealing with an inbound recovery hash, halt database loading to prevent layout shifting
-      if (window.location.hash.includes('access_token')) return
+      // Avoid tracking session profile fields if an active auth stream recovery hook is executing
+      if (window.location.href.includes('access_token')) return
 
       if (session) {
         supabase
@@ -62,17 +57,15 @@ export default function App() {
       }
     })
 
-    // STEP 3: Handle global Auth triggers cleanly
+    // STEP 2: Handle global Auth triggers cleanly
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
         setPage('reset-password')
-        window.location.hash = 'reset-password'
         return
       }
       
       if (event === 'SIGNED_IN' && session) {
-        // Prevent profile query overrides if running an active link sync
-        if (window.location.hash.includes('reset-password')) return
+        if (window.location.href.includes('reset-password')) return
 
         supabase
           .from('profiles')
