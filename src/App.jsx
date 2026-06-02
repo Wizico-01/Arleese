@@ -14,84 +14,81 @@ import ResetPasswordPage from './pages/ResetPasswordPage'
 
 export default function App() {
   const [page, setPage] = useState(() => {
-    // Check if a recovery signature exists anywhere in the initial URL structure
-    const searchString = window.location.search || ''
-    const hashString = window.location.hash || ''
-    const hasRecoveryToken = searchString.includes('access_token') || hashString.includes('access_token') || searchString.includes('type=recovery') || hashString.includes('type=recovery')
-
-    if (hasRecoveryToken) {
-      return 'reset-password'
-    }
-
-    const hash = hashString.replace('#', '').split('?')[0].split('&')[0]
+    const hash = window.location.hash.replace('#', '').split('?')[0].split('&')[0]
+    // ✅ FIXED: Whitelisted 'reset-password' so the hash parsing hook doesn't boot you to home!
     const validPages = ['home', 'browse', 'login', 'register', 'dashboard', 'profile', 'terms', 'saved', 'unlocked-contacts', 'reset-password']
     return validPages.includes(hash) ? hash : 'home'
   })
-  
   const [user, setUser] = useState(null)
   const [pageHistory, setPageHistory] = useState(['home'])
 
   useEffect(() => {
-    // STEP 1: Process running user profile details safely
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      // Avoid tracking session profile fields if an active auth stream recovery hook is executing
-      if (window.location.href.includes('access_token')) return
+  const hash = window.location.hash
+  const params = new URLSearchParams(hash.replace('#', ''))
+  const type = params.get('type')
+  const accessToken = params.get('access_token')
 
-      if (session) {
-        supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single()
-          .then(({ data: profile }) => {
-            if (profile) {
-              setUser({
-                id: session.user.id,
-                email: session.user.email,
-                name: profile.full_name,
-                role: profile.role,
-                verified: profile.nin_verified,
-              })
-            }
-          })
-      }
-    })
+  // ONLY go to reset-password for recovery type
+  // Do NOT redirect confirmation emails there
+  if (type === 'recovery' && accessToken) {
+    setPage('reset-password')
+    // Don't return — still load the session below
+  }
 
-    // STEP 2: Handle global Auth triggers cleanly
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        setPage('reset-password')
-        return
-      }
-      
-      if (event === 'SIGNED_IN' && session) {
-        if (window.location.href.includes('reset-password')) return
+  // For email confirmation (type=signup), just let Supabase handle it
+  // and load the user session normally
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    if (session) {
+      supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .single()
+        .then(({ data: profile }) => {
+          if (profile) {
+            setUser({
+              id: session.user.id,
+              email: session.user.email,
+              name: profile.full_name,
+              role: profile.role,
+              verified: profile.nin_verified,
+            })
+          }
+        })
+    }
+  })
 
-        supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single()
-          .then(({ data: profile }) => {
-            if (profile) {
-              setUser({
-                id: session.user.id,
-                email: session.user.email,
-                name: profile.full_name,
-                role: profile.role,
-                verified: profile.nin_verified,
-              })
-            }
-          })
-      }
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    if (event === 'PASSWORD_RECOVERY') {
+      setPage('reset-password')
+      return
+    }
+    if (event === 'SIGNED_IN' && session) {
+      if (window.location.hash.includes('type=recovery')) return
+      supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .single()
+        .then(({ data: profile }) => {
+          if (profile) {
+            setUser({
+              id: session.user.id,
+              email: session.user.email,
+              name: profile.full_name,
+              role: profile.role,
+              verified: profile.nin_verified,
+            })
+          }
+        })
+    }
+    if (event === 'SIGNED_OUT') {
+      setUser(null)
+    }
+  })
 
-      if (event === 'SIGNED_OUT') {
-        setUser(null)
-      }
-    })
-
-    return () => subscription.unsubscribe()
-  }, [])
+  return () => subscription.unsubscribe()
+}, [])
 
   // Handle browser back button
   useEffect(() => {
