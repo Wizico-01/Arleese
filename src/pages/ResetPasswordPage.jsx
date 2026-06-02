@@ -172,7 +172,7 @@ export default function ResetPasswordPage({ setPage }) {
           fontSize: "0.82rem", color: "#92400e",
           marginBottom: 24, textAlign: "left",
         }}>
-          ⚠️ If you don't see it in your inbox, check your <strong>Spam</strong> or <strong>Junk</strong> folder and mark it as Not Spam.
+          ⚠️ If you don't see it in your inbox, check your <strong>Spam</strong> or <strong>Junk</strong> folder and mark it as Not Spam or Safe.
         </div>
         <Btn full onClick={() => setPage('login')}>Back to Login</Btn>
       </div>
