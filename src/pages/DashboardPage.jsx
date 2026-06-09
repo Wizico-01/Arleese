@@ -66,7 +66,23 @@ export default function DashboardPage({ user, setPage }) {
     fetchMyListings()
   }, [user])
 
-  const remove = (id) => setListings(l => l.filter(x => x.id !== id))
+const remove = async (id) => {
+  if (!window.confirm("Are you sure you want to delete this listing? This cannot be undone.")) return
+  try {
+    const { error } = await supabase
+      .from('listings')
+      .delete()
+      .eq('id', id)
+      .eq('landlord_id', user.id)
+    if (error) {
+      alert("Could not delete. Please try again.")
+      return
+    }
+    setListings(l => l.filter(x => x.id !== id))
+  } catch (e) {
+    alert("Something went wrong. Check your connection.")
+  }
+}
   
   const toggleRentedBox = (id) => {
     setShowRentedBox(p => ({ ...p, [id]: !p[id] }))
