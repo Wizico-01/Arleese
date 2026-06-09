@@ -278,9 +278,13 @@ const remove = async (id) => {
                         <Btn variant="secondary" sm>
                           <Ic d={I.edit} s={13} /> Edit
                         </Btn>
-                        <Btn variant="danger" sm onClick={() => remove(l.id)}>
+                        <Btn variant="danger" sm onClick={() => {
+                         if (window.confirm("Are you sure you want to delete this listing? This cannot be undone.")) {
+                         remove(l.id)
+                          }
+                          }}>
                           <Ic d={I.trash} s={13} /> Remove
-                        </Btn>
+                          </Btn>
 
                         {l.status !== "rented" && (
                           <Btn variant="accent" sm onClick={() => toggleRentedBox(l.id)}>
