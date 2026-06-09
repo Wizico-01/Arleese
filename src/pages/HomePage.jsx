@@ -112,9 +112,9 @@ export default function HomePage({ setPage, user }) {
                                    //   Now only one property handles all four sides.
           }}>
             {[
-              ["1,200+", "Verified Listings"],
+              ["100%", "Direct to Landlord"],
               ["36", "States Covered"],
-              ["₦200", "Flat Unlock Fee"],
+              ["₦200", "Contact Unlock Fee"],
               ["0%", "Agent Commission"],
             ].map(([n, l]) => (
               <div key={l} style={{ textAlign: "center" }}>
