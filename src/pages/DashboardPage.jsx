@@ -12,13 +12,14 @@ export default function DashboardPage({ user, setPage }) {
   const [showRentedBox, setShowRentedBox] = useState({})
   const [showAdd, setShowAdd] = useState(false)
   const [listings, setListings] = useState([])
-  const [totalUnlocks, setTotalUnlocks] = useState(0) // ✅ Track global unlock tally for metrics card
+  const [totalUnlocks, setTotalUnlocks] = useState(0)
+  const [deleteId, setDeleteId] = useState(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
   useEffect(() => {
     const fetchMyListings = async () => {
       if (!user?.id) return
 
-      // 1. Pull core listings belonging to this specific landlord account
       const { data: listingsData, error: listingsError } = await supabase
         .from('listings')
         .select('*')
@@ -38,52 +39,54 @@ export default function DashboardPage({ user, setPage }) {
 
       const listingIds = listingsData.map(l => l.id)
 
-      // 2. Fetch all real-time matching entries inside the unlocks database ledger
       const { data: unlocksData, error: unlocksError } = await supabase
         .from('unlocks')
         .select('listing_id')
         .in('listing_id', listingIds)
 
       if (unlocksError) {
-        console.log('Error fetching unlocks count tracking data:', unlocksError)
+        console.log('Error fetching unlocks:', unlocksError)
         setListings(listingsData)
         return
       }
 
-      // 3. Map aggregates dynamically across individual listings
       const updatedListings = listingsData.map(item => {
         const itemUnlocksCount = unlocksData.filter(u => u.listing_id === item.id).length
-        return {
-          ...item,
-          unlocks: itemUnlocksCount // Overrides fallback to display accurate ledger count
-        }
+        return { ...item, unlocks: itemUnlocksCount }
       })
 
       setListings(updatedListings)
-      setTotalUnlocks(unlocksData.length) // Synchronize live totals card count
+      setTotalUnlocks(unlocksData.length)
     }
 
     fetchMyListings()
   }, [user])
 
-const remove = async (id) => {
-  if (!window.confirm("Are you sure you want to delete this listing? This cannot be undone.")) return
-  try {
-    const { error } = await supabase
-      .from('listings')
-      .delete()
-      .eq('id', id)
-      .eq('landlord_id', user.id)
-    if (error) {
-      alert("Could not delete. Please try again.")
-      return
+  const remove = async () => {
+    if (!deleteId) return
+    setDeleteLoading(true)
+    try {
+      const { error } = await supabase
+        .from('listings')
+        .delete()
+        .eq('id', deleteId)
+        .eq('landlord_id', user.id)
+
+      if (error) {
+        console.log('Delete error:', error)
+        setDeleteId(null)
+        setDeleteLoading(false)
+        return
+      }
+
+      setListings(l => l.filter(x => x.id !== deleteId))
+      setDeleteId(null)
+    } catch (e) {
+      console.log('Delete failed:', e)
     }
-    setListings(l => l.filter(x => x.id !== id))
-  } catch (e) {
-    alert("Something went wrong. Check your connection.")
+    setDeleteLoading(false)
   }
-}
-  
+
   const toggleRentedBox = (id) => {
     setShowRentedBox(p => ({ ...p, [id]: !p[id] }))
     setRentedInput(p => ({ ...p, [id]: "" }))
@@ -153,13 +156,77 @@ const remove = async (id) => {
     { icon: <Building2 size={26} strokeWidth={1.5} style={{ color: "#0d1b5e" }} />, l: "Total Listings", v: listings.length },
     { icon: <CheckCircle2 size={26} strokeWidth={1.5} style={{ color: "#0d1b5e" }} />, l: "Active", v: listings.filter(l => l.status === "active").length },
     { icon: <Key size={26} strokeWidth={1.5} style={{ color: "#0d1b5e" }} />, l: "Rented Out", v: listings.filter(l => l.status === "rented").length },
-    { icon: <Unlock size={26} strokeWidth={1.5} style={{ color: "#0d1b5e" }} />, l: "Contacts Unlocked", v: totalUnlocks }, // ✅ Populated directly from verified backend hook state
+    { icon: <Unlock size={26} strokeWidth={1.5} style={{ color: "#0d1b5e" }} />, l: "Contacts Unlocked", v: totalUnlocks },
   ]
 
   if (showAdd) return <AddListingForm onBack={() => setShowAdd(false)} onSubmit={add} user={user} />
 
   return (
     <div style={{ background: "#f4f3ef", minHeight: "100vh" }}>
+
+      {/* ── CUSTOM DELETE MODAL ── */}
+      {deleteId && (
+        <div style={{
+          position: "fixed", inset: 0,
+          background: "rgba(0,0,0,.65)",
+          zIndex: 999, display: "flex",
+          alignItems: "center", justifyContent: "center",
+          padding: 24,
+        }}>
+          <div style={{
+            background: "#fff", borderRadius: 18,
+            padding: "32px 24px", maxWidth: 340,
+            width: "100%", textAlign: "center",
+            boxShadow: "0 20px 60px rgba(0,0,0,.3)",
+          }}>
+            <div style={{ fontSize: "2.8rem", marginBottom: 14 }}>🗑️</div>
+            <h3 style={{
+              fontFamily: "'DM Serif Display',serif",
+              color: "#0d1b5e", fontSize: "1.25rem",
+              marginBottom: 10,
+            }}>
+              Delete Listing?
+            </h3>
+            <p style={{
+              color: "#6b7280", fontSize: "0.85rem",
+              lineHeight: 1.75, marginBottom: 26,
+            }}>
+              This listing will be permanently removed. Tenants will no longer see it. This action cannot be undone.
+            </p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                onClick={() => setDeleteId(null)}
+                disabled={deleteLoading}
+                style={{
+                  flex: 1, padding: "13px 0",
+                  border: "1.5px solid #e5e7eb",
+                  borderRadius: 9, background: "#fff",
+                  color: "#374151", fontWeight: 600,
+                  fontSize: "0.9rem", cursor: "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={remove}
+                disabled={deleteLoading}
+                style={{
+                  flex: 1, padding: "13px 0",
+                  border: "none", borderRadius: 9,
+                  background: deleteLoading ? "#9ca3af" : "#b91c1c",
+                  color: "#fff", fontWeight: 700,
+                  fontSize: "0.9rem",
+                  cursor: deleteLoading ? "not-allowed" : "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                {deleteLoading ? "Deleting..." : "Yes, Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── HEADER ── */}
       <div style={{ background: "linear-gradient(135deg,#060e33,#0d1b5e)", padding: "34px 24px 26px" }}>
@@ -182,14 +249,16 @@ const remove = async (id) => {
 
       <div style={{ maxWidth: 1080, margin: "0 auto", padding: "26px 24px" }}>
 
-        {/* ── STATS CARD GRID ── */}
+        {/* ── STATS GRID ── */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))", gap: 14, marginBottom: 24 }}>
           {stats.map(s => (
             <Card key={s.l} style={{ padding: 20 }}>
               <div style={{ display: "flex", alignItems: "center", height: 32, marginBottom: 7 }}>
                 {s.icon}
               </div>
-              <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: "1.75rem", color: "#0d1b5e", marginBottom: 3 }}>{s.v}</div>
+              <div style={{ fontFamily: "'DM Serif Display',serif", fontSize: "1.75rem", color: "#0d1b5e", marginBottom: 3 }}>
+                {s.v}
+              </div>
               <div style={{ fontSize: "0.78rem", color: "#6b7280" }}>{s.l}</div>
             </Card>
           ))}
@@ -198,7 +267,19 @@ const remove = async (id) => {
         {/* ── TABS ── */}
         <div style={{ display: "flex", gap: 4, background: "#e8e8e0", borderRadius: 10, padding: 4, width: "fit-content", marginBottom: 22 }}>
           {[["listings", "My Listings"], ["profile", "Profile & Verification"]].map(([t, l]) => (
-            <button key={t} onClick={() => setTab(t)} style={{ background: tab === t ? "#fff" : "transparent", color: tab === t ? "#0d1b5e" : "#6b7280", fontWeight: tab === t ? 700 : 400, border: "none", borderRadius: 8, padding: "7px 18px", fontSize: "0.84rem", cursor: "pointer", transition: "all .2s", fontFamily: "inherit" }}>
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              style={{
+                background: tab === t ? "#fff" : "transparent",
+                color: tab === t ? "#0d1b5e" : "#6b7280",
+                fontWeight: tab === t ? 700 : 400,
+                border: "none", borderRadius: 8,
+                padding: "7px 18px", fontSize: "0.84rem",
+                cursor: "pointer", transition: "all .2s",
+                fontFamily: "inherit",
+              }}
+            >
               {l}
             </button>
           ))}
@@ -256,10 +337,10 @@ const remove = async (id) => {
                         </div>
                       </div>
                       <div style={{ fontWeight: 700, color: "#0d1b5e", fontSize: "1.05rem" }}>
-                        ₦{l.price.toLocaleString()}/yr
+                        ₦{l.price?.toLocaleString()}/yr
                       </div>
                     </div>
-                    
+
                     <div style={{ display: "flex", gap: 18, marginBottom: 12, flexWrap: "wrap", alignItems: "center" }}>
                       <span style={{ fontSize: "0.76rem", color: "#6b7280", display: "inline-flex", alignItems: "center", gap: 4 }}>
                         <Eye size={13} strokeWidth={1.8} style={{ color: "#6b7280" }} /> {l.views || 0} views
@@ -267,24 +348,23 @@ const remove = async (id) => {
                       <span style={{ fontSize: "0.76rem", color: "#6b7280", display: "inline-flex", alignItems: "center", gap: 4 }}>
                         <PhoneCall size={12} strokeWidth={1.8} style={{ color: "#6b7280" }} /> {l.unlocks || 0} unlocks
                       </span>
-                      <span style={{ fontSize: "0.76rem", color: "#6b7280" }}>
-                        {l.beds} beds · {l.baths} baths · {l.size}
-                      </span>
                     </div>
 
                     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                      {/* ACTION BUTTONS ROW */}
+
+                      {/* ACTION BUTTONS */}
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                         <Btn variant="secondary" sm>
                           <Ic d={I.edit} s={13} /> Edit
                         </Btn>
-                        <Btn variant="danger" sm onClick={() => {
-                         if (window.confirm("Are you sure you want to delete this listing? This cannot be undone.")) {
-                         remove(l.id)
-                          }
-                          }}>
+
+                        <Btn
+                          variant="danger"
+                          sm
+                          onClick={() => setDeleteId(l.id)}
+                        >
                           <Ic d={I.trash} s={13} /> Remove
-                          </Btn>
+                        </Btn>
 
                         {l.status !== "rented" && (
                           <Btn variant="accent" sm onClick={() => toggleRentedBox(l.id)}>
@@ -314,28 +394,22 @@ const remove = async (id) => {
                             marginBottom: 8,
                             display: "flex",
                             alignItems: "center",
-                            gap: 6
+                            gap: 6,
                           }}>
                             <AlertTriangle size={15} strokeWidth={2} style={{ color: "#b45309" }} />
-                            To confirm this apartment is rented, type{" "}
-                            <strong>RENTED</strong> below:
+                            To confirm this apartment is rented, type <strong>RENTED</strong> below:
                           </p>
                           <div style={{ display: "flex", gap: 8 }}>
                             <input
                               type="text"
-                              placeholder='Type RENTED here'
+                              placeholder="Type RENTED here"
                               value={rentedInput[l.id] || ""}
-                              onChange={e => setRentedInput(p => ({
-                                ...p, [l.id]: e.target.value
-                              }))}
+                              onChange={e => setRentedInput(p => ({ ...p, [l.id]: e.target.value }))}
                               style={{
-                                flex: 1,
-                                padding: "8px 12px",
+                                flex: 1, padding: "8px 12px",
                                 border: "1.5px solid #fde68a",
-                                borderRadius: 8,
-                                fontSize: "0.88rem",
-                                background: "#fff",
-                                fontFamily: "inherit",
+                                borderRadius: 8, fontSize: "0.88rem",
+                                background: "#fff", fontFamily: "inherit",
                               }}
                               onFocus={e => e.target.style.borderColor = "#0d1b5e"}
                               onBlur={e => e.target.style.borderColor = "#fde68a"}
@@ -349,12 +423,9 @@ const remove = async (id) => {
                           </div>
                           {rentedError[l.id] && (
                             <p style={{
-                              fontSize: "0.78rem",
-                              color: "#b91c1c",
-                              marginTop: 6,
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 6
+                              fontSize: "0.78rem", color: "#b91c1c",
+                              marginTop: 6, display: "flex",
+                              alignItems: "center", gap: 6,
                             }}>
                               <AlertTriangle size={14} strokeWidth={2} style={{ color: "#b91c1c" }} />
                               {rentedError[l.id]}
@@ -362,6 +433,7 @@ const remove = async (id) => {
                           )}
                         </div>
                       )}
+
                     </div>
                   </div>
                 </Card>
@@ -376,8 +448,18 @@ const remove = async (id) => {
             <h3 style={{ fontWeight: 700, color: "#0d1b5e", marginBottom: 18 }}>
               Profile & Verification
             </h3>
-            <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20, paddingBottom: 20, borderBottom: "1px solid #f0efea" }}>
-              <div style={{ width: 54, height: 54, borderRadius: "50%", background: "#0d1b5e", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.35rem", fontWeight: 700, flexShrink: 0 }}>
+            <div style={{
+              display: "flex", alignItems: "center", gap: 14,
+              marginBottom: 20, paddingBottom: 20,
+              borderBottom: "1px solid #f0efea",
+            }}>
+              <div style={{
+                width: 54, height: 54, borderRadius: "50%",
+                background: "#0d1b5e", color: "#fff",
+                display: "flex", alignItems: "center",
+                justifyContent: "center", fontSize: "1.35rem",
+                fontWeight: 700, flexShrink: 0,
+              }}>
                 {user?.name?.[0]?.toUpperCase()}
               </div>
               <div>
@@ -395,7 +477,8 @@ const remove = async (id) => {
             </div>
           </Card>
         )}
+
       </div>
     </div>
   )
-}
+        }
