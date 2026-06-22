@@ -7,10 +7,10 @@ import ListingModal from '../components/modals/ListingModal'
 import UnlockModal from '../components/modals/UnlockModal'
 import { NG_STATES, PROP_TYPES } from '../data/constants'
 
-// ✅ Detect mobile once at module level
 const isMobile = () => window.innerWidth < 768
 
 export default function BrowsePage({ user, setPage }) {
+  const [listingType, setListingType] = useState('rent') // 'rent' or 'sale'
   const [listings, setListings] = useState([])
   const [search, setSearch] = useState("")
   const [fState, setFState] = useState("")
@@ -21,7 +21,7 @@ export default function BrowsePage({ user, setPage }) {
   const [viewMode, setViewMode] = useState("grid")
   const [selected, setSelected] = useState(null)
   const [unlocking, setUnlocking] = useState(null)
-  const [showFilters, setShowFilters] = useState(false) // ✅ mobile filter toggle
+  const [showFilters, setShowFilters] = useState(false)
   const [mobile, setMobile] = useState(isMobile())
 
   useEffect(() => {
@@ -29,16 +29,16 @@ export default function BrowsePage({ user, setPage }) {
       const { data } = await supabase
         .from('listings')
         .select('*')
+        .eq('listing_type', listingType)
         .order('created_at', { ascending: false })
       if (data) setListings(data)
     }
     fetchListings()
 
-    // ✅ Listen for resize
     const onResize = () => setMobile(isMobile())
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
-  }, [])
+  }, [listingType])
 
   let results = listings.filter(l => {
     if (fState && l.state !== fState) return false
@@ -57,7 +57,6 @@ export default function BrowsePage({ user, setPage }) {
     <div style={{
       background: "#fff", borderRadius: 16,
       border: "1px solid #e8e8e0", padding: 20,
-      // ✅ Only sticky on desktop
       position: mobile ? "relative" : "sticky",
       top: 86,
     }}>
@@ -84,12 +83,16 @@ export default function BrowsePage({ user, setPage }) {
       ))}
 
       <div style={{ marginBottom: 16 }}>
-        <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "#4b5563", marginBottom: 5 }}>Min Price (₦/yr)</label>
+        <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "#4b5563", marginBottom: 5 }}>
+          {listingType === 'sale' ? "Min Price (₦)" : "Min Price (₦/yr)"}
+        </label>
         <input type="number" value={fMin} onChange={e => setFMin(e.target.value)} placeholder="e.g. 200000"
           style={{ width: "100%", padding: "9px 11px", border: "1.5px solid #e5e7eb", borderRadius: 8, fontSize: "0.82rem", background: "#fafafa", boxSizing: "border-box" }} />
       </div>
       <div>
-        <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "#4b5563", marginBottom: 5 }}>Max Price (₦/yr)</label>
+        <label style={{ display: "block", fontSize: "0.76rem", fontWeight: 600, color: "#4b5563", marginBottom: 5 }}>
+          {listingType === 'sale' ? "Max Price (₦)" : "Max Price (₦/yr)"}
+        </label>
         <input type="number" value={fMax} onChange={e => setFMax(e.target.value)} placeholder="e.g. 1500000"
           style={{ width: "100%", padding: "9px 11px", border: "1.5px solid #e5e7eb", borderRadius: 8, fontSize: "0.82rem", background: "#fafafa", boxSizing: "border-box" }} />
       </div>
@@ -108,7 +111,43 @@ export default function BrowsePage({ user, setPage }) {
           <p style={{ color: "rgba(255,255,255,.56)", fontSize: "0.86rem", marginBottom: 18 }}>
             Direct from verified landlords, no agent fees.
           </p>
-          {/* ✅ Search bar won't overflow */}
+
+          {/* RENT / BUY TOGGLE */}
+          <div style={{
+            display: "flex", background: "rgba(255,255,255,.1)",
+            borderRadius: 12, padding: 4,
+            marginBottom: 16, maxWidth: 320,
+          }}>
+            <button
+              onClick={() => setListingType('rent')}
+              style={{
+                flex: 1, padding: "10px 0",
+                background: listingType === 'rent' ? "#fff" : "transparent",
+                color: listingType === 'rent' ? "#0d1b5e" : "#fff",
+                border: "none", borderRadius: 9,
+                fontWeight: 700, fontSize: "0.86rem",
+                cursor: "pointer", fontFamily: "inherit",
+                transition: "all .2s",
+              }}
+            >
+              🏠 Rent
+            </button>
+            <button
+              onClick={() => setListingType('sale')}
+              style={{
+                flex: 1, padding: "10px 0",
+                background: listingType === 'sale' ? "#fff" : "transparent",
+                color: listingType === 'sale' ? "#0d1b5e" : "#fff",
+                border: "none", borderRadius: 9,
+                fontWeight: 700, fontSize: "0.86rem",
+                cursor: "pointer", fontFamily: "inherit",
+                transition: "all .2s",
+              }}
+            >
+              🏷️ Buy
+            </button>
+          </div>
+
           <div style={{ display: "flex", background: "#fff", borderRadius: 10, overflow: "hidden", boxShadow: "0 4px 18px rgba(0,0,0,.18)" }}>
             <span style={{ display: "flex", alignItems: "center", paddingLeft: 15, color: "#9ca3af", flexShrink: 0 }}>
               <Ic d={I.search} s={17} />
@@ -128,7 +167,6 @@ export default function BrowsePage({ user, setPage }) {
 
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "26px 16px", boxSizing: "border-box" }}>
 
-        {/* ✅ MOBILE: Filter toggle button */}
         {mobile && (
           <button
             onClick={() => setShowFilters(v => !v)}
@@ -147,14 +185,12 @@ export default function BrowsePage({ user, setPage }) {
           </button>
         )}
 
-        {/* ✅ MOBILE: Show filters panel inline when toggled */}
         {mobile && showFilters && (
           <div style={{ marginBottom: 16 }}>{FiltersPanel}</div>
         )}
 
         <div style={{ display: "flex", gap: 22, alignItems: "flex-start" }}>
 
-          {/* ✅ DESKTOP ONLY: sidebar */}
           {!mobile && (
             <aside style={{ width: 226, flexShrink: 0 }}>
               {FiltersPanel}
@@ -165,7 +201,12 @@ export default function BrowsePage({ user, setPage }) {
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 18 }}>
               <p style={{ fontSize: "0.86rem", color: "#374151" }}>
-                <strong style={{ color: "#0d1b5e" }}>{results.length}</strong> apartment{results.length !== 1 ? "s" : ""} found{fState ? ` in ${fState}` : ""}
+                <strong style={{ color: "#0d1b5e" }}>{results.length}</strong>{" "}
+                {listingType === 'sale' ? "propert" : "apartment"}
+                {results.length !== 1
+                  ? (listingType === 'sale' ? "ies" : "s")
+                  : (listingType === 'sale' ? "y" : "")
+                } found{fState ? ` in ${fState}` : ""}
               </p>
               <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                 <select value={sort} onChange={e => setSort(e.target.value)}
@@ -188,7 +229,9 @@ export default function BrowsePage({ user, setPage }) {
             {results.length === 0 ? (
               <div style={{ textAlign: "center", padding: "60px 0", color: "#9ca3af" }}>
                 <div style={{ fontSize: "2.8rem", marginBottom: 10 }}>🔍</div>
-                <p style={{ fontWeight: 600, color: "#374151", marginBottom: 4 }}>No apartments found</p>
+                <p style={{ fontWeight: 600, color: "#374151", marginBottom: 4 }}>
+                  No {listingType === 'sale' ? "properties" : "apartments"} found
+                </p>
                 <p style={{ fontSize: "0.84rem" }}>Try adjusting your filters or search</p>
               </div>
             ) : viewMode === "grid" ? (
@@ -202,8 +245,7 @@ export default function BrowsePage({ user, setPage }) {
                     style={{ background: "#fff", borderRadius: 14, border: "1px solid #e8e8e0", display: "flex", overflow: "hidden", cursor: "pointer", boxShadow: "0 1px 4px rgba(0,0,0,.04)", transition: "box-shadow .2s" }}
                     onMouseEnter={e => e.currentTarget.style.boxShadow = "0 4px 14px rgba(0,0,0,.09)"}
                     onMouseLeave={e => e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,.04)"}>
-                    {/* ✅ Hide image on mobile list view to save space */}
-                    {!mobile && <img src={l.img} alt="" style={{ width: 190, objectFit: "cover", flexShrink: 0 }} />}
+                    {!mobile && <img src={l.images?.[0] || l.img || ""} alt="" style={{ width: 190, objectFit: "cover", flexShrink: 0 }} />}
                     <div style={{ padding: "16px 20px", flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
                       <div>
                         <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 6 }}>
@@ -214,13 +256,14 @@ export default function BrowsePage({ user, setPage }) {
                           </div>
                           <div style={{ textAlign: "right" }}>
                             <div style={{ fontWeight: 700, color: "#0d1b5e", fontSize: "1.05rem" }}>₦{l.price.toLocaleString()}</div>
-                            <div style={{ fontSize: "0.7rem", color: "#9ca3af" }}>per year</div>
+                            <div style={{ fontSize: "0.7rem", color: "#9ca3af" }}>
+                              {l.listing_type === 'sale' ? 'one-time price' : 'per year'}
+                            </div>
                           </div>
                         </div>
                         <div style={{ display: "flex", gap: 14, marginTop: 10 }}>
-                          <span style={{ display: "flex", alignItems: "center", gap: 3, color: "#6b7280", fontSize: "0.77rem" }}><Ic d={I.bed} s={12} />{l.beds} Bed</span>
-                          <span style={{ display: "flex", alignItems: "center", gap: 3, color: "#6b7280", fontSize: "0.77rem" }}><Ic d={I.bath} s={12} />{l.baths} Bath</span>
-                          <span style={{ color: "#6b7280", fontSize: "0.77rem" }}>{l.size}</span>
+                          <span style={{ display: "flex", alignItems: "center", gap: 3, color: "#6b7280", fontSize: "0.77rem" }}><Ic d={I.bath} s={12} />{l.kitchs || 0} Kitchen</span>
+                          <span style={{ display: "flex", alignItems: "center", gap: 3, color: "#6b7280", fontSize: "0.77rem" }}><Ic d={I.bath} s={12} />{l.baths || 0} Bath</span>
                         </div>
                       </div>
                       <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
