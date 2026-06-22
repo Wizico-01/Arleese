@@ -44,6 +44,15 @@ export default function ListingCard({ listing, onClick }) {
           ) : null}
         </div>
 
+        {/* FOR SALE BADGE — top right */}
+        {listing.listing_type === 'sale' && (
+          <div style={{ position: "absolute", top: 10, right: 10 }}>
+            <Badge color="#fff" bg="#92400e">
+              🏷️ For Sale
+            </Badge>
+          </div>
+        )}
+
         {/* DATE BADGE */}
         <div style={{
           position: "absolute", bottom: 10, right: 10,
@@ -92,7 +101,9 @@ export default function ListingCard({ listing, onClick }) {
             <div style={{ fontWeight: 700, color: "#0d1b5e", fontSize: "1.06rem" }}>
               ₦{listing.price?.toLocaleString()}
             </div>
-            <div style={{ fontSize: "0.7rem", color: "#9ca3af" }}>per year</div>
+            <div style={{ fontSize: "0.7rem", color: "#9ca3af" }}>
+              {listing.listing_type === 'sale' ? 'one-time price' : 'per year'}
+            </div>
           </div>
 
           {listing.status === 'rented' ? (
@@ -101,7 +112,7 @@ export default function ListingCard({ listing, onClick }) {
             </Badge>
           ) : (
             <Badge color="#1e3db5" bg="#eef2ff">
-              View Apartment
+              {listing.listing_type === 'sale' ? "View Property" : "View Apartment"}
             </Badge>
           )}
         </div>
