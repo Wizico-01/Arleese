@@ -35,7 +35,7 @@ export default function ListingCard({ listing, onClick }) {
         <div style={{ position: "absolute", top: 10, left: 10 }}>
           {listing.status === 'rented' ? (
             <Badge color="#fff" bg="#b91c1c">
-              Rented Out
+              {listing.listing_type === 'sale' ? 'Sold' : 'Rented Out'}
             </Badge>
           ) : listing.verified ? (
             <Badge color="#fff" bg="#0d1b5e">
@@ -84,14 +84,25 @@ export default function ListingCard({ listing, onClick }) {
           {listing.title}
         </h3>
 
-        <div style={{ display: "flex", gap: 12, marginBottom: 14 }}>
-          <span style={{ display: "flex", alignItems: "center", gap: 4, color: "#6b7280", fontSize: "0.77rem" }}>
-            <Ic d={I.bath} s={12} /> {listing.kitchs || 0} Kitchen
-          </span>
-          <span style={{ display: "flex", alignItems: "center", gap: 4, color: "#6b7280", fontSize: "0.77rem" }}>
-            <Ic d={I.bath} s={12} /> {listing.baths || 0} Bath
-          </span>
-        </div>
+        {/* HIDE KITCHEN/BATH FOR LAND */}
+        {listing.type !== 'Land' && (
+          <div style={{ display: "flex", gap: 12, marginBottom: 14 }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 4, color: "#6b7280", fontSize: "0.77rem" }}>
+              <Ic d={I.bath} s={12} /> {listing.kitchs || 0} Kitchen
+            </span>
+            <span style={{ display: "flex", alignItems: "center", gap: 4, color: "#6b7280", fontSize: "0.77rem" }}>
+              <Ic d={I.bath} s={12} /> {listing.baths || 0} Bath
+            </span>
+          </div>
+        )}
+
+        {listing.type === 'Land' && (
+          <div style={{ marginBottom: 14 }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 4, color: "#6b7280", fontSize: "0.77rem" }}>
+              <Ic d={I.pin} s={12} /> {listing.type}
+            </span>
+          </div>
+        )}
 
         <div style={{
           display: "flex", justifyContent: "space-between",
@@ -119,4 +130,4 @@ export default function ListingCard({ listing, onClick }) {
       </div>
     </div>
   )
-}
+              }
