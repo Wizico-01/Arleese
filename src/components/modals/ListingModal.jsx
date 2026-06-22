@@ -6,17 +6,14 @@ import { Btn, Badge } from '../UI'
 export default function ListingModal({ listing: l, onClose, user, setPage }) {
   const [mainImg, setMainImg] = useState(l.images?.[0] || l.img || "")
   const [showFullImg, setShowFullImg] = useState(false)
-  
-  // State to hold unlocked contact info locally once paid
+
   const [unlockedData, setUnlockedData] = useState(null)
   const [isPaid, setIsPaid] = useState(false)
 
-  // ┌────────────────────────────────────────────────────────┐
-  // │ STANDALONE DATABASE SAVER & CONTACT FETCH FUNCTION     │
-  // └────────────────────────────────────────────────────────┘
+  const isSale = l.listing_type === 'sale'
+
   const saveUnlockToDatabase = async (referenceId) => {
     try {
-      // 1. Record the transaction
       const { error: insertError } = await supabase
         .from('unlocks')
         .insert([
@@ -35,10 +32,9 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
         return;
       }
 
-      // 2. Fetch the contact info directly from the listing to show it instantly
       const { data: listingData, error: fetchError } = await supabase
         .from('listings')
-        .select('phone, landlord_phone, address, area, state, price')
+        .select('phone, landlord_phone, address, landlord_address, area, state, price')
         .eq('id', l.id)
         .single();
 
@@ -46,18 +42,14 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
         setUnlockedData(listingData);
         setIsPaid(true);
       } else {
-        // Fallback to whatever props we have if direct fetch fails
         setIsPaid(true);
       }
-      
+
     } catch (catchErr) {
       console.error('Error executing unlock initialization workflow:', catchErr);
     }
   };
 
-  // ┌────────────────────────────────────────────────────────┐
-  // │ OPTIMIZED ERROR-FREE PAYSTACK RUNTIME TRIGGER          │
-  // └────────────────────────────────────────────────────────┘
   const handlePayment = () => {
     if (!user?.id || !user?.email) {
       alert("Please sign in to unlock this contact.");
@@ -72,11 +64,11 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
 
     try {
       const handler = window.PaystackPop.setup({
-        key: 'pk_live_7e4040d2bf01ea308dfc657c49dc25b0e8206643', // Clean verified key
+        key: 'pk_live_7e4040d2bf01ea308dfc657c49dc25b0e8206643',
         email: user.email,
-        amount: 20000, // ₦200 in kobo
+        amount: 20000,
         currency: 'NGN',
-        
+
         callback: function(response) {
           console.log('Payment Approved. Reference ID:', response.reference);
           saveUnlockToDatabase(response.reference);
@@ -173,6 +165,13 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
               </Badge>
             </div>
           )}
+          {isSale && (
+            <div style={{ position: "absolute", top: 12, left: 12 }}>
+              <Badge color="#fff" bg="#92400e">
+                🏷️ For Sale
+              </Badge>
+            </div>
+          )}
         </div>
 
         {/* THUMBNAIL STRIP */}
@@ -226,7 +225,7 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
                 ₦{l.price?.toLocaleString()}
               </div>
               <div style={{ fontSize: "0.7rem", color: "#9ca3af", textAlign: "right" }}>
-                per year
+                {isSale ? "one-time price" : "per year"}
               </div>
             </div>
           </div>
@@ -264,44 +263,52 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
           {l.status === 'rented' ? (
             <div style={{ background: "#fee2e2", border: "1px solid #fca5a5", borderRadius: 13, padding: "18px 20px", textAlign: "center" }}>
               <div style={{ fontSize: "1.5rem", marginBottom: 6 }}>🔑</div>
-              <div style={{ fontWeight: 700, color: "#991b1b", fontSize: "0.96rem", marginBottom: 4 }}>This Apartment Has Been Rented</div>
-              <div style={{ color: "#b91c1c", fontSize: "0.82rem" }}>This property is no longer available for rent.</div>
+              <div style={{ fontWeight: 700, color: "#991b1b", fontSize: "0.96rem", marginBottom: 4 }}>
+                {isSale ? "This Property Has Been Sold" : "This Apartment Has Been Rented"}
+              </div>
+              <div style={{ color: "#b91c1c", fontSize: "0.82rem" }}>
+                {isSale ? "This property is no longer available for purchase." : "This property is no longer available for rent."}
+              </div>
             </div>
           ) : isPaid ? (
-            /* INSTANT DISPLAY ONCE PAID — NO NAME FIELD AT ALL */
             <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 13, padding: "18px 20px" }}>
               <div style={{ fontWeight: 700, color: "#166534", fontSize: "1rem", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
                 ✅ Contact Unlocked Successfully
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.92rem", color: "#1e293b" }}>
-                  <span>📞</span> 
-                  <strong>Phone:</strong> 
+                  <span>📞</span>
+                  <strong>Phone:</strong>
                   <a href={`tel:${unlockedData?.phone || unlockedData?.landlord_phone || l.phone || l.landlord_phone}`} style={{ color: "#0d1b5e", fontWeight: 600, textDecoration: "underline" }}>
                     {unlockedData?.phone || unlockedData?.landlord_phone || l.phone || l.landlord_phone || "N/A"}
                   </a>
                 </div>
-                
+
                 <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.92rem", color: "#1e293b" }}>
-                  <span>📍</span> 
-                  <strong>Address:</strong> 
-                  <span>{unlockedData?.address || l.address || `${l.area}, ${l.state}`}</span>
+                  <span>📍</span>
+                  <strong>Address:</strong>
+                  <span>{unlockedData?.address || unlockedData?.landlord_address || l.landlord_address || `${l.area}, ${l.state}`}</span>
                 </div>
 
                 <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.92rem", color: "#1e293b" }}>
-                  <span>💰</span> 
-                  <strong>Price:</strong> 
-                  <span>₦{(unlockedData?.price || l.price)?.toLocaleString()}/year</span>
+                  <span>💰</span>
+                  <strong>Price:</strong>
+                  <span>₦{(unlockedData?.price || l.price)?.toLocaleString()}{isSale ? "" : "/year"}</span>
                 </div>
               </div>
             </div>
           ) : (
-            /* UNLOCK BANNER BUTTON */
             <div style={{ background: "linear-gradient(135deg,#f0f3ff,#eaefff)", border: "1px solid #c7d4fd", borderRadius: 13, padding: "18px 20px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
                 <div>
-                  <div style={{ fontWeight: 700, color: "#0d1b5e", fontSize: "0.96rem", marginBottom: 3 }}>Get Direct Landlord Contact</div>
-                  <div style={{ color: "#6b7280", fontSize: "0.79rem" }}>One-time ₦200 fee. No agent. No recurring charges.</div>
+                  <div style={{ fontWeight: 700, color: "#0d1b5e", fontSize: "0.96rem", marginBottom: 3 }}>
+                    {isSale ? "Get Direct Seller Contact" : "Get Direct Landlord Contact"}
+                  </div>
+                  <div style={{ color: "#6b7280", fontSize: "0.79rem" }}>
+                    {isSale
+                      ? "One-time ₦200 fee to unlock the seller's direct contact."
+                      : "One-time ₦200 fee. No agent. No recurring charges."}
+                  </div>
                 </div>
                 <Btn onClick={handlePayment}>
                   <Ic d={I.lock} s={14} /> Unlock for ₦200
@@ -313,4 +320,4 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
       </div>
     </div>
   )
-}
+        }
