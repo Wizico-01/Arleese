@@ -5,16 +5,17 @@ import { Ic, I } from '../components/Icons'
 import { NG_STATES, PROP_TYPES, AMENITIES } from '../data/constants'
 
 export default function AddListingForm({ onBack, onSubmit, user }) {
+  const [listingType, setListingType] = useState(null) // 'rent' or 'sale'
   const [step, setStep] = useState(1)
   const [err, setErr] = useState("")
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState({
-  title: "", type: "", state: "", area: "",
-  price: "", kitchs: "", baths: "",
-  desc: "", landlord_phone: "", landlord_address: "",
-  amenities: [], images: [], imageFiles: [],
-  videos: [], videoFiles: [],
-})
+    title: "", type: "", state: "", area: "",
+    price: "", kitchs: "", baths: "",
+    desc: "", landlord_phone: "", landlord_address: "",
+    amenities: [], images: [], imageFiles: [],
+    videos: [], videoFiles: [],
+  })
   const imgRef = useRef()
   const videoRef = useRef()
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }))
@@ -27,23 +28,24 @@ export default function AddListingForm({ onBack, onSubmit, user }) {
   }
 
   const validateStep1 = () => {
-  if (!form.title || !form.type || !form.state || !form.area || !form.price) {
-    setErr("Please fill all required fields."); return false
+    if (!form.title || !form.type || !form.state || !form.area || !form.price) {
+      setErr("Please fill all required fields."); return false
+    }
+    if (!form.landlord_phone) {
+      setErr("Please add your phone number so tenants can contact you."); return false
+    }
+    if (!form.landlord_address) {
+      setErr("Please add the exact property address."); return false
+    }
+    setErr(""); return true
   }
-  if (!form.landlord_phone) {
-    setErr("Please add your phone number so tenants can contact you."); return false
-  }
-  if (!form.landlord_address) {
-    setErr("Please add the exact property address."); return false
-  }
-  setErr(""); return true
-}
+
   const validateStep2 = () => {
-  if (!form.kitchs || !form.baths) {
-    setErr("Please specify kitchen and bathrooms."); return false
+    if (!form.kitchs || !form.baths) {
+      setErr("Please specify kitchen and bathrooms."); return false
+    }
+    setErr(""); return true
   }
-  setErr(""); return true
-}
 
   const handleSubmit = async () => {
     setLoading(true)
@@ -51,10 +53,9 @@ export default function AddListingForm({ onBack, onSubmit, user }) {
     try {
       let imageUrls = []
 
-      // Upload each image to Supabase Storage
       for (const imgFile of form.imageFiles || []) {
         const filePath = `${Date.now()}-${imgFile.name}`
-        const { data: uploadData, error: uploadError } = await supabase.storage
+        const { data: uploadData } = await supabase.storage
           .from('apartment-images')
           .upload(filePath, imgFile)
 
@@ -67,40 +68,38 @@ export default function AddListingForm({ onBack, onSubmit, user }) {
       }
 
       let videoUrls = []
+      for (const vidFile of form.videoFiles || []) {
+        const filePath = `videos/${Date.now()}-${vidFile.name}`
+        const { data: uploadData } = await supabase.storage
+          .from('apartment-images')
+          .upload(filePath, vidFile)
 
-// Upload each video to Supabase Storage
-for (const vidFile of form.videoFiles || []) {
-  const filePath = `videos/${Date.now()}-${vidFile.name}`
-  const { data: uploadData } = await supabase.storage
-    .from('apartment-images')
-    .upload(filePath, vidFile)
+        if (uploadData) {
+          const { data: urlData } = supabase.storage
+            .from('apartment-images')
+            .getPublicUrl(filePath)
+          videoUrls.push(urlData.publicUrl)
+        }
+      }
 
-  if (uploadData) {
-    const { data: urlData } = supabase.storage
-      .from('apartment-images')
-      .getPublicUrl(filePath)
-    videoUrls.push(urlData.publicUrl)
-  }
-}
-
-      // Save listing to database
       const { data, error } = await supabase.from('listings').insert({
-          title: form.title,
-          type: form.type,
-          state: form.state,
-          area: form.area,
-          price: Number(form.price),
-          kitchs: Number(form.kitchs),
-          baths: Number(form.baths),
-          description: form.desc,
-          landlord_phone: form.landlord_phone,
-          landlord_address: form.landlord_address,
-          amenities: form.amenities,
-          images: imageUrls,
-          videos: videoUrls,
-          status: 'active',
-          landlord_id: user.id,
-        })
+        title: form.title,
+        type: form.type,
+        state: form.state,
+        area: form.area,
+        price: Number(form.price),
+        kitchs: Number(form.kitchs),
+        baths: Number(form.baths),
+        description: form.desc,
+        landlord_phone: form.landlord_phone,
+        landlord_address: form.landlord_address,
+        amenities: form.amenities,
+        images: imageUrls,
+        videos: videoUrls,
+        status: 'active',
+        landlord_id: user.id,
+        listing_type: listingType,
+      })
 
       if (error) {
         setErr(error.message)
@@ -108,7 +107,6 @@ for (const vidFile of form.videoFiles || []) {
         return
       }
 
-      // Pass the new listing back to dashboard immediately
       onSubmit({
         title: form.title,
         type: form.type,
@@ -125,6 +123,7 @@ for (const vidFile of form.videoFiles || []) {
         verified: true,
         views: 0,
         unlocks: 0,
+        listing_type: listingType,
       })
 
     } catch (e) {
@@ -183,6 +182,98 @@ for (const vidFile of form.videoFiles || []) {
     )
   }
 
+  // SHOW CHOICE SCREEN FIRST — before any form steps
+  if (!listingType) {
+    return (
+      <div style={{
+        background: "#f4f3ef", minHeight: "100vh",
+        display: "flex", alignItems: "center",
+        justifyContent: "center", padding: 24,
+      }}>
+        <div style={{ width: "100%", maxWidth: 440 }}>
+          <button
+            onClick={onBack}
+            style={{
+              background: "none", border: "none", color: "#6b7280",
+              cursor: "pointer", fontSize: "0.85rem",
+              marginBottom: 20, fontFamily: "inherit",
+            }}
+          >
+            ← Back to Dashboard
+          </button>
+
+          <h2 style={{
+            fontFamily: "'DM Serif Display',serif",
+            color: "#0d1b5e", fontSize: "1.5rem",
+            marginBottom: 8, textAlign: "center",
+          }}>
+            What would you like to list?
+          </h2>
+          <p style={{
+            color: "#6b7280", fontSize: "0.85rem",
+            textAlign: "center", marginBottom: 28,
+          }}>
+            Choose whether this property is for rent or for sale
+          </p>
+
+          <div
+            onClick={() => setListingType('rent')}
+            style={{
+              background: "#fff", border: "2px solid #e8e8e0",
+              borderRadius: 16, padding: "22px 20px",
+              cursor: "pointer", marginBottom: 14,
+              display: "flex", alignItems: "center", gap: 16,
+            }}
+          >
+            <div style={{
+              width: 52, height: 52, borderRadius: 12,
+              background: "#eef2ff", display: "flex",
+              alignItems: "center", justifyContent: "center",
+              fontSize: "1.6rem", flexShrink: 0,
+            }}>
+              🏠
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, color: "#0d1b5e", fontSize: "1.02rem", marginBottom: 3 }}>
+                Rent Your Apartment
+              </div>
+              <div style={{ color: "#6b7280", fontSize: "0.8rem" }}>
+                List a vacant apartment for tenants to rent
+              </div>
+            </div>
+          </div>
+
+          <div
+            onClick={() => setListingType('sale')}
+            style={{
+              background: "#fff", border: "2px solid #e8e8e0",
+              borderRadius: 16, padding: "22px 20px",
+              cursor: "pointer",
+              display: "flex", alignItems: "center", gap: 16,
+            }}
+          >
+            <div style={{
+              width: 52, height: 52, borderRadius: 12,
+              background: "#fef3c7", display: "flex",
+              alignItems: "center", justifyContent: "center",
+              fontSize: "1.6rem", flexShrink: 0,
+            }}>
+              🏷️
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, color: "#0d1b5e", fontSize: "1.02rem", marginBottom: 3 }}>
+                Sell Your Property
+              </div>
+              <div style={{ color: "#6b7280", fontSize: "0.8rem" }}>
+                List a property for buyers to purchase
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div style={{ background: "#f4f3ef", minHeight: "100vh", paddingBottom: 80 }}>
 
@@ -197,7 +288,7 @@ for (const vidFile of form.videoFiles || []) {
           gap: 14,
         }}>
           <button
-            onClick={onBack}
+            onClick={() => setListingType(null)}
             style={{
               background: "rgba(255,255,255,.1)", border: "none",
               color: "#fff", borderRadius: 8, padding: "7px 14px",
@@ -210,7 +301,7 @@ for (const vidFile of form.videoFiles || []) {
             fontFamily: "'DM Serif Display',serif",
             color: "#fff", fontSize: "1.3rem",
           }}>
-            Add New Listing
+            {listingType === 'sale' ? "List Property for Sale" : "Add New Rental Listing"}
           </h1>
         </div>
       </div>
@@ -289,13 +380,15 @@ for (const vidFile of form.videoFiles || []) {
               />
 
               <Field
-                label="Annual Rent (₦)"
+                label={listingType === 'sale' ? "Sale Price (₦)" : "Annual Rent (₦)"}
                 type="number"
-                placeholder="e.g. 650000"
+                placeholder={listingType === 'sale' ? "e.g. 25000000" : "e.g. 650000"}
                 value={form.price}
                 onChange={e => set("price", e.target.value)}
                 required
-                note="Enter the yearly rent in Naira."
+                note={listingType === 'sale'
+                  ? "Enter the one-time sale price in Naira."
+                  : "Enter the yearly rent in Naira."}
               />
 
               <Field
@@ -307,23 +400,23 @@ for (const vidFile of form.videoFiles || []) {
               />
 
               <Field
-               label="Your Phone Number"
-               placeholder="e.g. 08012345678"
-               type="tel"
-               value={form.landlord_phone}
-               onChange={e => set("landlord_phone", e.target.value)}
-               required
-               note="Tenants will see this after paying ₦200 unlock fee."
-               />
+                label="Your Phone Number"
+                placeholder="e.g. 08012345678"
+                type="tel"
+                value={form.landlord_phone}
+                onChange={e => set("landlord_phone", e.target.value)}
+                required
+                note="Tenants will see this after paying ₦200 unlock fee."
+              />
 
               <Field
-               label="Exact Property Address"
-               placeholder="e.g. 14B Harmony Close, Lekki Phase 1, Lagos"
-               value={form.landlord_address}
-               onChange={e => set("landlord_address", e.target.value)}
-               required
-              note="Full address shown to tenants after they unlock contact."
-               />
+                label="Exact Property Address"
+                placeholder="e.g. 14B Harmony Close, Lekki Phase 1, Lagos"
+                value={form.landlord_address}
+                onChange={e => set("landlord_address", e.target.value)}
+                required
+                note="Full address shown to tenants after they unlock contact."
+              />
 
               <Btn full onClick={() => { if (validateStep1()) setStep(2) }}>
                 Continue →
@@ -351,13 +444,13 @@ for (const vidFile of form.videoFiles || []) {
                   required
                 />
                 <Field
-                label="Bathrooms"
-                type="number"
-                 placeholder="e.g. 1"
-                 value={form.baths}
+                  label="Bathrooms"
+                  type="number"
+                  placeholder="e.g. 1"
+                  value={form.baths}
                   onChange={e => set("baths", e.target.value)}
                   required
-                  />
+                />
               </div>
 
               {/* AMENITIES */}
@@ -427,9 +520,9 @@ for (const vidFile of form.videoFiles || []) {
                 Photos & Review
               </h3>
               <p style={{ color: "#6b7280", fontSize: "0.83rem", marginBottom: 14 }}>
-               Upload up to 7 photos and videos of the apartment.
-               Good media attracts more tenants.
-               </p>
+                Upload up to 7 photos and videos of the apartment.
+                Good media attracts more buyers and tenants.
+              </p>
 
               {/* UPLOAD AREA */}
               <div
@@ -442,29 +535,29 @@ for (const vidFile of form.videoFiles || []) {
                 }}
               >
                 <input
-  ref={imgRef}
-  type="file"
-  accept="image/*"
-  multiple
-  style={{ display: "none" }}
-  onChange={e => {
-    const files = Array.from(e.target.files)
-    const combined = [...form.imageFiles, ...files]
-    if (combined.length > 7) {
-      setErr("Maximum 7 photos allowed.")
-      return
-    }
-    const urls = files.map(f => URL.createObjectURL(f))
-    set("images", [...form.images, ...urls])
-    set("imageFiles", [...form.imageFiles, ...files])
-  }}
-/>
+                  ref={imgRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  style={{ display: "none" }}
+                  onChange={e => {
+                    const files = Array.from(e.target.files)
+                    const combined = [...form.imageFiles, ...files]
+                    if (combined.length > 7) {
+                      setErr("Maximum 7 photos allowed.")
+                      return
+                    }
+                    const urls = files.map(f => URL.createObjectURL(f))
+                    set("images", [...form.images, ...urls])
+                    set("imageFiles", [...form.imageFiles, ...files])
+                  }}
+                />
                 <Ic d={I.img} s={30} stroke="#9ca3af" />
                 <p style={{ fontSize: "0.85rem", color: "#6b7280", marginTop: 8, fontWeight: 500 }}>
-  Tap to upload photos
+                  Tap to upload photos
                 </p>
                 <p style={{ fontSize: "0.7rem", color: "#9ca3af", marginTop: 3 }}>
-                JPG or PNG · Max 10MB each · Up to 7 photos
+                  JPG or PNG · Max 10MB each · Up to 7 photos
                 </p>
               </div>
 
@@ -517,105 +610,105 @@ for (const vidFile of form.videoFiles || []) {
                   ))}
                 </div>
               )}
-              {/* VIDEO UPLOAD AREA */}
-               <p style={{
-               fontWeight: 600, color: "#374151",
-              fontSize: "0.82rem", marginTop: 18, marginBottom: 8,
-              }}>
-              Upload Videos (optional)
-             </p>
-             <div
-             onClick={() => videoRef.current.click()}
-             style={{
-    border: "2px dashed #d1d5db", borderRadius: 12,
-    padding: "22px 16px", textAlign: "center",
-    cursor: "pointer", background: "#fafafa",
-    marginBottom: 12,
-  }}
->
-  <input
-    ref={videoRef}
-    type="file"
-    accept="video/*"
-    multiple
-    style={{ display: "none" }}
-    onChange={e => {
-      const files = Array.from(e.target.files)
-      const combined = [...form.videoFiles, ...files]
-      if (combined.length > 3) {
-        setErr("Maximum 3 videos allowed.")
-        return
-      }
-      // Check each video is under 50MB
-      const tooBig = files.find(f => f.size > 50 * 1024 * 1024)
-      if (tooBig) {
-        setErr(`${tooBig.name} is too large. Max size is 50MB per video.`)
-        return
-      }
-      const urls = files.map(f => URL.createObjectURL(f))
-      set("videos", [...form.videos, ...urls])
-      set("videoFiles", [...form.videoFiles, ...files])
-    }}
-  />
-  <div style={{ fontSize: "1.8rem", marginBottom: 6 }}>🎥</div>
-  <p style={{ fontSize: "0.85rem", color: "#6b7280", fontWeight: 500 }}>
-    Tap to upload videos
-  </p>
-  <p style={{ fontSize: "0.7rem", color: "#9ca3af", marginTop: 3 }}>
-    MP4 or MOV · Max 50MB each · Up to 3 videos
-  </p>
-</div>
 
-{/* VIDEO PREVIEWS */}
-{form.videos.length > 0 && (
-  <div style={{
-    display: "flex", flexDirection: "column",
-    gap: 10, marginBottom: 16,
-  }}>
-    {form.videos.map((vid, idx) => (
-      <div key={idx} style={{
-        position: "relative",
-        borderRadius: 10, overflow: "hidden",
-        background: "#000",
-      }}>
-        <video
-          src={vid}
-          controls
-          style={{
-            width: "100%", maxHeight: 200,
-            display: "block", objectFit: "cover",
-          }}
-        />
-        <button
-          onClick={() => {
-            set("videos", form.videos.filter((_, j) => j !== idx))
-            set("videoFiles", form.videoFiles.filter((_, j) => j !== idx))
-          }}
-          style={{
-            position: "absolute", top: 8, right: 8,
-            width: 28, height: 28, borderRadius: "50%",
-            background: "rgba(0,0,0,.7)", border: "none",
-            color: "#fff", cursor: "pointer",
-            display: "flex", alignItems: "center",
-            justifyContent: "center", fontSize: "0.8rem",
-            fontWeight: 700,
-          }}
-        >
-          ✕
-        </button>
-        <div style={{
-          position: "absolute", bottom: 8, left: 8,
-          background: "rgba(0,0,0,.6)", color: "#fff",
-          fontSize: "0.65rem", padding: "2px 7px",
-          borderRadius: 4, fontWeight: 600,
-        }}>
-          VIDEO {idx + 1}
-        </div>
-      </div>
-    ))}
-  </div>
-)}
-                
+              {/* VIDEO UPLOAD AREA */}
+              <p style={{
+                fontWeight: 600, color: "#374151",
+                fontSize: "0.82rem", marginTop: 18, marginBottom: 8,
+              }}>
+                Upload Videos (optional)
+              </p>
+              <div
+                onClick={() => videoRef.current.click()}
+                style={{
+                  border: "2px dashed #d1d5db", borderRadius: 12,
+                  padding: "22px 16px", textAlign: "center",
+                  cursor: "pointer", background: "#fafafa",
+                  marginBottom: 12,
+                }}
+              >
+                <input
+                  ref={videoRef}
+                  type="file"
+                  accept="video/*"
+                  multiple
+                  style={{ display: "none" }}
+                  onChange={e => {
+                    const files = Array.from(e.target.files)
+                    const combined = [...form.videoFiles, ...files]
+                    if (combined.length > 3) {
+                      setErr("Maximum 3 videos allowed.")
+                      return
+                    }
+                    const tooBig = files.find(f => f.size > 50 * 1024 * 1024)
+                    if (tooBig) {
+                      setErr(`${tooBig.name} is too large. Max size is 50MB per video.`)
+                      return
+                    }
+                    const urls = files.map(f => URL.createObjectURL(f))
+                    set("videos", [...form.videos, ...urls])
+                    set("videoFiles", [...form.videoFiles, ...files])
+                  }}
+                />
+                <div style={{ fontSize: "1.8rem", marginBottom: 6 }}>🎥</div>
+                <p style={{ fontSize: "0.85rem", color: "#6b7280", fontWeight: 500 }}>
+                  Tap to upload videos
+                </p>
+                <p style={{ fontSize: "0.7rem", color: "#9ca3af", marginTop: 3 }}>
+                  MP4 or MOV · Max 50MB each · Up to 3 videos
+                </p>
+              </div>
+
+              {/* VIDEO PREVIEWS */}
+              {form.videos.length > 0 && (
+                <div style={{
+                  display: "flex", flexDirection: "column",
+                  gap: 10, marginBottom: 16,
+                }}>
+                  {form.videos.map((vid, idx) => (
+                    <div key={idx} style={{
+                      position: "relative",
+                      borderRadius: 10, overflow: "hidden",
+                      background: "#000",
+                    }}>
+                      <video
+                        src={vid}
+                        controls
+                        style={{
+                          width: "100%", maxHeight: 200,
+                          display: "block", objectFit: "cover",
+                        }}
+                      />
+                      <button
+                        onClick={() => {
+                          set("videos", form.videos.filter((_, j) => j !== idx))
+                          set("videoFiles", form.videoFiles.filter((_, j) => j !== idx))
+                        }}
+                        style={{
+                          position: "absolute", top: 8, right: 8,
+                          width: 28, height: 28, borderRadius: "50%",
+                          background: "rgba(0,0,0,.7)", border: "none",
+                          color: "#fff", cursor: "pointer",
+                          display: "flex", alignItems: "center",
+                          justifyContent: "center", fontSize: "0.8rem",
+                          fontWeight: 700,
+                        }}
+                      >
+                        ✕
+                      </button>
+                      <div style={{
+                        position: "absolute", bottom: 8, left: 8,
+                        background: "rgba(0,0,0,.6)", color: "#fff",
+                        fontSize: "0.65rem", padding: "2px 7px",
+                        borderRadius: 4, fontWeight: 600,
+                      }}>
+                        VIDEO {idx + 1}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {/* SUMMARY */}
               <div style={{
                 background: "#f4f3ef", borderRadius: 12,
@@ -628,16 +721,16 @@ for (const vidFile of form.videoFiles || []) {
                   📋 LISTING SUMMARY
                 </h4>
                 {[
+                  ["Listing Type", listingType === 'sale' ? "For Sale" : "For Rent"],
                   ["Title", form.title],
                   ["Type", form.type],
                   ["Location", `${form.area}, ${form.state}`],
-                  ["Annual Rent", form.price ? `₦${Number(form.price).toLocaleString()}` : "—"],
+                  [listingType === 'sale' ? "Sale Price" : "Annual Rent",
+                    form.price ? `₦${Number(form.price).toLocaleString()}` : "—"],
                   ["Kitchen", form.kitchs || "—"],
                   ["Bathrooms", form.baths || "—"],
                   ["Photos", `${form.images.length} uploaded`],
                   ["Videos", form.videos.length > 0 ? `${form.videos.length} uploaded` : "None"],
-                  ["Phone", form.landlord_phone || "—"],
-                  ["Address", form.landlord_address || "—"],
                   ["Amenities", form.amenities.length > 0
                     ? `${form.amenities.length} selected`
                     : "None"],
@@ -647,7 +740,7 @@ for (const vidFile of form.videoFiles || []) {
                     fontSize: "0.8rem", padding: "4px 0",
                     borderBottom: "1px solid #e8e8e0",
                   }}>
-                    <span style={{ color: "#9ca3af", minWidth: 75 }}>{k}:</span>
+                    <span style={{ color: "#9ca3af", minWidth: 95 }}>{k}:</span>
                     <span style={{ color: "#0d1b5e", fontWeight: 600 }}>{v}</span>
                   </div>
                 ))}
