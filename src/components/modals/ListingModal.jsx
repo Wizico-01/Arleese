@@ -11,6 +11,7 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
   const [isPaid, setIsPaid] = useState(false)
 
   const isSale = l.listing_type === 'sale'
+  const isLand = l.type === 'Land'
 
   const saveUnlockToDatabase = async (referenceId) => {
     try {
@@ -230,11 +231,11 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
             </div>
           </div>
 
-          {/* STATS PILLS */}
+          {/* STATS PILLS — Kitchen/Bath hidden for Land */}
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", paddingBottom: 14, borderBottom: "1px solid #f0efea", marginBottom: 16 }}>
             {[
-              `${l.kitchs || 0} Kitchen`,
-              `${l.baths || 0} Bathroom${l.baths > 1 ? "s" : ""}`,
+              !isLand ? `${l.kitchs || 0} Kitchen` : null,
+              !isLand ? `${l.baths || 0} Bathroom${l.baths > 1 ? "s" : ""}` : null,
               l.type,
             ].filter(Boolean).map(v => (
               <div key={v} style={{ background: "#f4f3ef", borderRadius: 8, padding: "6px 12px", fontSize: "0.82rem", color: "#374151" }}>
