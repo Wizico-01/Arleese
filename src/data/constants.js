@@ -11,6 +11,19 @@ export const PROP_TYPES = [
   "4 Bedroom","Duplex","Bungalow","Penthouse","Shared Apartment"
 ]
 
+export const SALE_PROP_TYPES = [
+  "Land",
+  "Duplex",
+  "Bungalow",
+  "Detached House",
+  "Semi-Detached House",
+  "Terrace House",
+  "Storey Building",
+  "Block of Flats",
+  "Estate / Compound",
+  "Commercial Property",
+]
+
 export const AMENITIES = [
   "Running Water","Borehole","24/7 Electricity","Generator",
   "POP Ceiling","Tiled Floors","Parking Space","Security","CCTV",
