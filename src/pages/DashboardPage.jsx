@@ -155,7 +155,7 @@ export default function DashboardPage({ user, setPage }) {
   const stats = [
     { icon: <Building2 size={26} strokeWidth={1.5} style={{ color: "#0d1b5e" }} />, l: "Total Listings", v: listings.length },
     { icon: <CheckCircle2 size={26} strokeWidth={1.5} style={{ color: "#0d1b5e" }} />, l: "Active", v: listings.filter(l => l.status === "active").length },
-    { icon: <Key size={26} strokeWidth={1.5} style={{ color: "#0d1b5e" }} />, l: "Rented Out", v: listings.filter(l => l.status === "rented").length },
+    { icon: <Key size={26} strokeWidth={1.5} style={{ color: "#0d1b5e" }} />, l: "Rented/Sold", v: listings.filter(l => l.status === "rented").length },
     { icon: <Unlock size={26} strokeWidth={1.5} style={{ color: "#0d1b5e" }} />, l: "Contacts Unlocked", v: totalUnlocks },
   ]
 
@@ -191,7 +191,7 @@ export default function DashboardPage({ user, setPage }) {
               color: "#6b7280", fontSize: "0.85rem",
               lineHeight: 1.75, marginBottom: 26,
             }}>
-              This listing will be permanently removed. Tenants will no longer see it. This action cannot be undone.
+              This listing will be permanently removed. It will no longer be visible. This action cannot be undone.
             </p>
             <div style={{ display: "flex", gap: 10 }}>
               <button
@@ -296,7 +296,7 @@ export default function DashboardPage({ user, setPage }) {
                 No listings yet
               </h3>
               <p style={{ color: "#6b7280", fontSize: "0.86rem", marginBottom: 22 }}>
-                Add your first apartment to start receiving tenant enquiries.
+                Add your first listing to start receiving enquiries.
               </p>
               <Btn onClick={() => setShowAdd(true)}>
                 <Ic d={I.plus} s={15} /> Add First Listing
@@ -314,7 +314,7 @@ export default function DashboardPage({ user, setPage }) {
                   <div style={{ padding: "14px 16px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
                       <div>
-                        <div style={{ marginBottom: 5 }}>
+                        <div style={{ display: "flex", gap: 6, marginBottom: 5, flexWrap: "wrap" }}>
                           <Badge
                             color={
                               l.status === "active" ? "#166534" :
@@ -326,7 +326,13 @@ export default function DashboardPage({ user, setPage }) {
                             }
                           >
                             {l.status === "active" ? "● Active" :
-                             l.status === "rented" ? "Rented Out" : "Pending Review"}
+                             l.status === "rented" ? (l.listing_type === 'sale' ? "Sold" : "Rented Out") : "Pending Review"}
+                          </Badge>
+                          <Badge
+                            color={l.listing_type === 'sale' ? "#92400e" : "#1e3db5"}
+                            bg={l.listing_type === 'sale' ? "#fef3c7" : "#eef2ff"}
+                          >
+                            {l.listing_type === 'sale' ? "🏷️ For Sale" : "🏠 For Rent"}
                           </Badge>
                         </div>
                         <h3 style={{ fontFamily: "'DM Serif Display',serif", fontSize: "1.05rem", color: "#0d1b5e", marginBottom: 3 }}>
@@ -336,8 +342,10 @@ export default function DashboardPage({ user, setPage }) {
                           <Ic d={I.pin} s={11} /> {l.area}, {l.state}
                         </div>
                       </div>
-                      <div style={{ fontWeight: 700, color: "#0d1b5e", fontSize: "1.05rem" }}>
-                        ₦{l.price?.toLocaleString()}/yr
+                      <div style={{ textAlign: "right" }}>
+                        <div style={{ fontWeight: 700, color: "#0d1b5e", fontSize: "1.05rem" }}>
+                          ₦{l.price?.toLocaleString()}{l.listing_type === 'sale' ? '' : '/yr'}
+                        </div>
                       </div>
                     </div>
 
@@ -368,7 +376,7 @@ export default function DashboardPage({ user, setPage }) {
 
                         {l.status !== "rented" && (
                           <Btn variant="accent" sm onClick={() => toggleRentedBox(l.id)}>
-                            Mark as Rented
+                            {l.listing_type === 'sale' ? "Mark as Sold" : "Mark as Rented"}
                           </Btn>
                         )}
 
@@ -379,7 +387,7 @@ export default function DashboardPage({ user, setPage }) {
                         )}
                       </div>
 
-                      {/* RENTED CONFIRMATION BOX */}
+                      {/* RENTED/SOLD CONFIRMATION BOX */}
                       {showRentedBox[l.id] && (
                         <div style={{
                           background: "#fffbeb",
@@ -397,7 +405,7 @@ export default function DashboardPage({ user, setPage }) {
                             gap: 6,
                           }}>
                             <AlertTriangle size={15} strokeWidth={2} style={{ color: "#b45309" }} />
-                            To confirm this apartment is rented, type <strong>RENTED</strong> below:
+                            To confirm this property is {l.listing_type === 'sale' ? 'sold' : 'rented'}, type <strong>RENTED</strong> below:
                           </p>
                           <div style={{ display: "flex", gap: 8 }}>
                             <input
@@ -481,4 +489,4 @@ export default function DashboardPage({ user, setPage }) {
       </div>
     </div>
   )
-        }
+}
