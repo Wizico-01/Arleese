@@ -2,7 +2,7 @@ import { supabase } from '../lib/supabase'
 import { useState, useRef } from 'react'
 import { Btn, Field, Sel, Card, ErrBox } from '../components/UI'
 import { Ic, I } from '../components/Icons'
-import { NG_STATES, PROP_TYPES, AMENITIES } from '../data/constants'
+import { NG_STATES, PROP_TYPES, SALE_PROP_TYPES, AMENITIES } from '../data/constants'
 
 export default function AddListingForm({ onBack, onSubmit, user }) {
   const [listingType, setListingType] = useState(null) // 'rent' or 'sale'
@@ -41,6 +41,9 @@ export default function AddListingForm({ onBack, onSubmit, user }) {
   }
 
   const validateStep2 = () => {
+    if (form.type === 'Land') {
+      setErr(""); return true
+    }
     if (!form.kitchs || !form.baths) {
       setErr("Please specify kitchen and bathrooms."); return false
     }
@@ -88,8 +91,8 @@ export default function AddListingForm({ onBack, onSubmit, user }) {
         state: form.state,
         area: form.area,
         price: Number(form.price),
-        kitchs: Number(form.kitchs),
-        baths: Number(form.baths),
+        kitchs: form.type === 'Land' ? 0 : Number(form.kitchs),
+        baths: form.type === 'Land' ? 0 : Number(form.baths),
         description: form.desc,
         landlord_phone: form.landlord_phone,
         landlord_address: form.landlord_address,
@@ -113,8 +116,8 @@ export default function AddListingForm({ onBack, onSubmit, user }) {
         state: form.state,
         area: form.area,
         price: Number(form.price),
-        kitchs: Number(form.kitchs),
-        baths: Number(form.baths),
+        kitchs: form.type === 'Land' ? 0 : Number(form.kitchs),
+        baths: form.type === 'Land' ? 0 : Number(form.baths),
         description: form.desc,
         amenities: form.amenities,
         images: imageUrls,
@@ -349,7 +352,9 @@ export default function AddListingForm({ onBack, onSubmit, user }) {
 
               <Field
                 label="Property Title"
-                placeholder="e.g. 2-Bedroom Flat in Lekki Phase 1"
+                placeholder={listingType === 'sale'
+                  ? "e.g. 4-Bedroom Duplex in Lekki Phase 1"
+                  : "e.g. 2-Bedroom Flat in Lekki Phase 1"}
                 value={form.title}
                 onChange={e => set("title", e.target.value)}
                 required
@@ -359,7 +364,7 @@ export default function AddListingForm({ onBack, onSubmit, user }) {
                 label="Property Type"
                 value={form.type}
                 onChange={e => set("type", e.target.value)}
-                options={PROP_TYPES}
+                options={listingType === 'sale' ? SALE_PROP_TYPES : PROP_TYPES}
                 required
               />
 
@@ -393,7 +398,7 @@ export default function AddListingForm({ onBack, onSubmit, user }) {
 
               <Field
                 label="Property Description"
-                placeholder="Describe the apartment, location, condition, nearby landmarks…"
+                placeholder="Describe the property, location, condition, nearby landmarks…"
                 value={form.desc}
                 onChange={e => set("desc", e.target.value)}
                 rows={4}
@@ -406,7 +411,7 @@ export default function AddListingForm({ onBack, onSubmit, user }) {
                 value={form.landlord_phone}
                 onChange={e => set("landlord_phone", e.target.value)}
                 required
-                note="Tenants will see this after paying ₦200 unlock fee."
+                note="Tenants/buyers will see this after paying ₦200 unlock fee."
               />
 
               <Field
@@ -415,7 +420,7 @@ export default function AddListingForm({ onBack, onSubmit, user }) {
                 value={form.landlord_address}
                 onChange={e => set("landlord_address", e.target.value)}
                 required
-                note="Full address shown to tenants after they unlock contact."
+                note="Full address shown after they unlock contact."
               />
 
               <Btn full onClick={() => { if (validateStep1()) setStep(2) }}>
@@ -434,24 +439,36 @@ export default function AddListingForm({ onBack, onSubmit, user }) {
                 Details & Amenities
               </h3>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <Field
-                  label="Kitchen"
-                  type="number"
-                  placeholder="e.g. 2"
-                  value={form.kitchs}
-                  onChange={e => set("kitchs", e.target.value)}
-                  required
-                />
-                <Field
-                  label="Bathrooms"
-                  type="number"
-                  placeholder="e.g. 1"
-                  value={form.baths}
-                  onChange={e => set("baths", e.target.value)}
-                  required
-                />
-              </div>
+              {form.type === 'Land' && (
+                <div style={{
+                  background: "#eef2ff", borderRadius: 10,
+                  padding: "12px 14px", marginBottom: 18,
+                  fontSize: "0.82rem", color: "#1e3db5",
+                }}>
+                  ℹ️ Kitchen and bathroom details are skipped for Land listings.
+                </div>
+              )}
+
+              {form.type !== 'Land' && (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <Field
+                    label="Kitchen"
+                    type="number"
+                    placeholder="e.g. 2"
+                    value={form.kitchs}
+                    onChange={e => set("kitchs", e.target.value)}
+                    required
+                  />
+                  <Field
+                    label="Bathrooms"
+                    type="number"
+                    placeholder="e.g. 1"
+                    value={form.baths}
+                    onChange={e => set("baths", e.target.value)}
+                    required
+                  />
+                </div>
+              )}
 
               {/* AMENITIES */}
               <div style={{ marginBottom: 20 }}>
@@ -520,8 +537,8 @@ export default function AddListingForm({ onBack, onSubmit, user }) {
                 Photos & Review
               </h3>
               <p style={{ color: "#6b7280", fontSize: "0.83rem", marginBottom: 14 }}>
-                Upload up to 7 photos and videos of the apartment.
-                Good media attracts more buyers and tenants.
+                Upload up to 7 photos and videos of the property.
+                Good media attracts more {listingType === 'sale' ? 'buyers' : 'tenants'}.
               </p>
 
               {/* UPLOAD AREA */}
@@ -563,199 +580,4 @@ export default function AddListingForm({ onBack, onSubmit, user }) {
 
               {/* IMAGE PREVIEWS */}
               {form.images.length > 0 && (
-                <div style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(3, 1fr)",
-                  gap: 8, marginBottom: 16,
-                }}>
-                  {form.images.map((img, idx) => (
-                    <div key={idx} style={{
-                      position: "relative",
-                      borderRadius: 8, overflow: "hidden",
-                    }}>
-                      <img
-                        src={img} alt=""
-                        style={{
-                          width: "100%", height: 80,
-                          objectFit: "cover", display: "block",
-                        }}
-                      />
-                      <button
-                        onClick={() => {
-                          set("images", form.images.filter((_, j) => j !== idx))
-                          set("imageFiles", form.imageFiles.filter((_, j) => j !== idx))
-                        }}
-                        style={{
-                          position: "absolute", top: 3, right: 3,
-                          width: 20, height: 20, borderRadius: "50%",
-                          background: "rgba(0,0,0,.6)", border: "none",
-                          color: "#fff", cursor: "pointer",
-                          display: "flex", alignItems: "center",
-                          justifyContent: "center", fontSize: "0.7rem",
-                        }}
-                      >
-                        ✕
-                      </button>
-                      {idx === 0 && (
-                        <div style={{
-                          position: "absolute", bottom: 3, left: 3,
-                          background: "#0d1b5e", color: "#fff",
-                          fontSize: "0.6rem", padding: "1px 5px",
-                          borderRadius: 3, fontWeight: 700,
-                        }}>
-                          COVER
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* VIDEO UPLOAD AREA */}
-              <p style={{
-                fontWeight: 600, color: "#374151",
-                fontSize: "0.82rem", marginTop: 18, marginBottom: 8,
-              }}>
-                Upload Videos (optional)
-              </p>
-              <div
-                onClick={() => videoRef.current.click()}
-                style={{
-                  border: "2px dashed #d1d5db", borderRadius: 12,
-                  padding: "22px 16px", textAlign: "center",
-                  cursor: "pointer", background: "#fafafa",
-                  marginBottom: 12,
-                }}
-              >
-                <input
-                  ref={videoRef}
-                  type="file"
-                  accept="video/*"
-                  multiple
-                  style={{ display: "none" }}
-                  onChange={e => {
-                    const files = Array.from(e.target.files)
-                    const combined = [...form.videoFiles, ...files]
-                    if (combined.length > 3) {
-                      setErr("Maximum 3 videos allowed.")
-                      return
-                    }
-                    const tooBig = files.find(f => f.size > 50 * 1024 * 1024)
-                    if (tooBig) {
-                      setErr(`${tooBig.name} is too large. Max size is 50MB per video.`)
-                      return
-                    }
-                    const urls = files.map(f => URL.createObjectURL(f))
-                    set("videos", [...form.videos, ...urls])
-                    set("videoFiles", [...form.videoFiles, ...files])
-                  }}
-                />
-                <div style={{ fontSize: "1.8rem", marginBottom: 6 }}>🎥</div>
-                <p style={{ fontSize: "0.85rem", color: "#6b7280", fontWeight: 500 }}>
-                  Tap to upload videos
-                </p>
-                <p style={{ fontSize: "0.7rem", color: "#9ca3af", marginTop: 3 }}>
-                  MP4 or MOV · Max 50MB each · Up to 3 videos
-                </p>
-              </div>
-
-              {/* VIDEO PREVIEWS */}
-              {form.videos.length > 0 && (
-                <div style={{
-                  display: "flex", flexDirection: "column",
-                  gap: 10, marginBottom: 16,
-                }}>
-                  {form.videos.map((vid, idx) => (
-                    <div key={idx} style={{
-                      position: "relative",
-                      borderRadius: 10, overflow: "hidden",
-                      background: "#000",
-                    }}>
-                      <video
-                        src={vid}
-                        controls
-                        style={{
-                          width: "100%", maxHeight: 200,
-                          display: "block", objectFit: "cover",
-                        }}
-                      />
-                      <button
-                        onClick={() => {
-                          set("videos", form.videos.filter((_, j) => j !== idx))
-                          set("videoFiles", form.videoFiles.filter((_, j) => j !== idx))
-                        }}
-                        style={{
-                          position: "absolute", top: 8, right: 8,
-                          width: 28, height: 28, borderRadius: "50%",
-                          background: "rgba(0,0,0,.7)", border: "none",
-                          color: "#fff", cursor: "pointer",
-                          display: "flex", alignItems: "center",
-                          justifyContent: "center", fontSize: "0.8rem",
-                          fontWeight: 700,
-                        }}
-                      >
-                        ✕
-                      </button>
-                      <div style={{
-                        position: "absolute", bottom: 8, left: 8,
-                        background: "rgba(0,0,0,.6)", color: "#fff",
-                        fontSize: "0.65rem", padding: "2px 7px",
-                        borderRadius: 4, fontWeight: 600,
-                      }}>
-                        VIDEO {idx + 1}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* SUMMARY */}
-              <div style={{
-                background: "#f4f3ef", borderRadius: 12,
-                padding: 14, marginBottom: 18,
-              }}>
-                <h4 style={{
-                  fontWeight: 700, color: "#374151",
-                  fontSize: "0.8rem", marginBottom: 8,
-                }}>
-                  📋 LISTING SUMMARY
-                </h4>
-                {[
-                  ["Listing Type", listingType === 'sale' ? "For Sale" : "For Rent"],
-                  ["Title", form.title],
-                  ["Type", form.type],
-                  ["Location", `${form.area}, ${form.state}`],
-                  [listingType === 'sale' ? "Sale Price" : "Annual Rent",
-                    form.price ? `₦${Number(form.price).toLocaleString()}` : "—"],
-                  ["Kitchen", form.kitchs || "—"],
-                  ["Bathrooms", form.baths || "—"],
-                  ["Photos", `${form.images.length} uploaded`],
-                  ["Videos", form.videos.length > 0 ? `${form.videos.length} uploaded` : "None"],
-                  ["Amenities", form.amenities.length > 0
-                    ? `${form.amenities.length} selected`
-                    : "None"],
-                ].map(([k, v]) => (
-                  <div key={k} style={{
-                    display: "flex", gap: 8,
-                    fontSize: "0.8rem", padding: "4px 0",
-                    borderBottom: "1px solid #e8e8e0",
-                  }}>
-                    <span style={{ color: "#9ca3af", minWidth: 95 }}>{k}:</span>
-                    <span style={{ color: "#0d1b5e", fontWeight: 600 }}>{v}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div style={{ display: "flex", gap: 10 }}>
-                <Btn variant="secondary" onClick={() => setStep(2)}>← Back</Btn>
-                <Btn full onClick={handleSubmit} disabled={loading}>
-                  {loading ? "Submitting…" : <><Ic d={I.check} s={15} /> Submit Listing</>}
-                </Btn>
-              </div>
-            </div>
-          )}
-        </Card>
-      </div>
-    </div>
-  )
-}
+            
