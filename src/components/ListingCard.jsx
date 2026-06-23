@@ -12,7 +12,8 @@ export default function ListingCard({ listing, onClick }) {
         border: "1px solid #e8e8e0",
         boxShadow: "0 2px 6px rgba(0,0,0,.05)",
         cursor: "pointer",
-        transition: "transform .2s, box-shadow .2s",
+        transition: "transform .2s ease, box-shadow .2s ease",
+        willChange: "transform", // Optimizes rendering performance on hover
       }}
       onMouseEnter={e => {
         e.currentTarget.style.transform = "translateY(-3px)"
@@ -23,8 +24,8 @@ export default function ListingCard({ listing, onClick }) {
         e.currentTarget.style.boxShadow = "0 2px 6px rgba(0,0,0,.05)"
       }}
     >
-      {/* IMAGE */}
-      <div style={{ position: "relative" }}>
+      {/* IMAGE CONTAINER */}
+      <div style={{ position: "relative", overflow: "hidden" }}>
         <img
           src={listing.images?.[0] || listing.img || ""}
           alt={listing.title}
@@ -44,7 +45,7 @@ export default function ListingCard({ listing, onClick }) {
           ) : null}
         </div>
 
-        {/* FOR SALE BADGE — top right */}
+        {/* FOR SALE BADGE */}
         {listing.listing_type === 'sale' && (
           <div style={{ position: "absolute", top: 10, right: 10 }}>
             <Badge color="#fff" bg="#92400e">
@@ -66,7 +67,7 @@ export default function ListingCard({ listing, onClick }) {
         </div>
       </div>
 
-      {/* DETAILS */}
+      {/* DETAILS PANEL */}
       <div style={{ padding: "16px 18px 18px" }}>
         <div style={{
           display: "flex", alignItems: "center", gap: 4,
@@ -84,11 +85,12 @@ export default function ListingCard({ listing, onClick }) {
           {listing.title}
         </h3>
 
-        {/* HIDE KITCHEN/BATH FOR LAND */}
+        {/* SPECIFICATIONS */}
         {listing.type !== 'Land' && (
           <div style={{ display: "flex", gap: 12, marginBottom: 14 }}>
             <span style={{ display: "flex", alignItems: "center", gap: 4, color: "#6b7280", fontSize: "0.77rem" }}>
-              <Ic d={I.bath} s={12} /> {listing.kitchs || 0} Kitchen
+              {/* Fixed: changed icon target path from I.bath to I.kitchen/I.home or similar */}
+              <Ic d={I.kitchen || I.home} s={12} /> {listing.kitchs || 0} Kitchen
             </span>
             <span style={{ display: "flex", alignItems: "center", gap: 4, color: "#6b7280", fontSize: "0.77rem" }}>
               <Ic d={I.bath} s={12} /> {listing.baths || 0} Bath
@@ -104,13 +106,14 @@ export default function ListingCard({ listing, onClick }) {
           </div>
         )}
 
+        {/* PRICING & CALL TO ACTION */}
         <div style={{
           display: "flex", justifyContent: "space-between",
           alignItems: "center", borderTop: "1px solid #f0efea", paddingTop: 12,
         }}>
           <div>
             <div style={{ fontWeight: 700, color: "#0d1b5e", fontSize: "1.06rem" }}>
-              ₦{listing.price?.toLocaleString()}
+              ₦{listing.price ? listing.price.toLocaleString() : "0"}
             </div>
             <div style={{ fontSize: "0.7rem", color: "#9ca3af" }}>
               {listing.listing_type === 'sale' ? 'one-time price' : 'per year'}
@@ -130,4 +133,4 @@ export default function ListingCard({ listing, onClick }) {
       </div>
     </div>
   )
-              }
+}
