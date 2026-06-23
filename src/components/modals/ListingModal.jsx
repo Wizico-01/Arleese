@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { Ic, I } from '../Icons'
 import { Btn, Badge } from '../UI'
@@ -6,12 +6,60 @@ import { Btn, Badge } from '../UI'
 export default function ListingModal({ listing: l, onClose, user, setPage }) {
   const [mainImg, setMainImg] = useState(l.images?.[0] || l.img || "")
   const [showFullImg, setShowFullImg] = useState(false)
-
   const [unlockedData, setUnlockedData] = useState(null)
   const [isPaid, setIsPaid] = useState(false)
+  const [checkingAccess, setCheckingAccess] = useState(true)
 
   const isSale = l.listing_type === 'sale'
   const isLand = l.type === 'Land'
+  const UNLOCK_FEE_NAIRA = 200
+
+  // Fix 1: Reset active photo view state when switching context listings
+  useEffect(() => {
+    setMainImg(l.images?.[0] || l.img || "")
+    setIsPaid(false)
+    setUnlockedData(null)
+    
+    // Fix 2: Check database to see if this user previously unlocked this property
+    async function checkExistingUnlock() {
+      if (!user?.id) {
+        setCheckingAccess(false)
+        return
+      }
+      try {
+        const { data, error } = await supabase
+          .from('unlocks')
+          .select('id')
+          .eq('tenant_id', user.id)
+          .eq('listing_id', l.id)
+          .maybeSingle()
+
+        if (data && !error) {
+          // If already unlocked, pull contact information instantly
+          await fetchContactDetails()
+        }
+      } catch (err) {
+        console.error("Error verifying unlock status ledger:", err)
+      } finally {
+        setCheckingAccess(false)
+      }
+    }
+
+    checkExistingUnlock()
+  }, [l.id, user?.id])
+
+  const fetchContactDetails = async () => {
+    const { data: listingData, error: fetchError } = await supabase
+      .from('listings')
+      .select('phone, landlord_phone, address, landlord_address, area, state, price')
+      .eq('id', l.id)
+      .single()
+
+    if (!fetchError && listingData) {
+      setUnlockedData(listingData)
+    }
+    setIsPaid(true)
+  }
 
   const saveUnlockToDatabase = async (referenceId) => {
     try {
@@ -21,70 +69,57 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
           {
             tenant_id: user.id,
             listing_id: l.id,
-            amount: 200,
+            amount: UNLOCK_FEE_NAIRA, // Linked semantic variable instead of loose numbers
             paid_at: new Date().toISOString(),
             payment_method: 'paystack'
           }
-        ]);
+        ])
 
       if (insertError) {
-        console.error('Database entry write block:', insertError.message);
-        alert('Payment cleared, but registration failed. Ref: ' + referenceId);
-        return;
+        console.error('Database entry write block:', insertError.message)
+        alert('Payment cleared, but verification failed. Ref: ' + referenceId)
+        return
       }
 
-      const { data: listingData, error: fetchError } = await supabase
-        .from('listings')
-        .select('phone, landlord_phone, address, landlord_address, area, state, price')
-        .eq('id', l.id)
-        .single();
-
-      if (!fetchError && listingData) {
-        setUnlockedData(listingData);
-        setIsPaid(true);
-      } else {
-        setIsPaid(true);
-      }
+      await fetchContactDetails()
 
     } catch (catchErr) {
-      console.error('Error executing unlock initialization workflow:', catchErr);
+      console.error('Error executing unlock initialization workflow:', catchErr)
     }
-  };
+  }
 
   const handlePayment = () => {
     if (!user?.id || !user?.email) {
-      alert("Please sign in to unlock this contact.");
-      if (typeof setPage === 'function') setPage('login');
-      return;
+      alert("Please sign in to unlock this contact.")
+      if (typeof setPage === 'function') setPage('login')
+      return
     }
 
     if (!window.PaystackPop) {
-      alert("Paystack engine loading. Please refresh your page.");
-      return;
+      alert("Paystack engine loading. Please refresh your page.")
+      return
     }
 
     try {
       const handler = window.PaystackPop.setup({
         key: 'pk_live_7e4040d2bf01ea308dfc657c49dc25b0e8206643',
         email: user.email,
-        amount: 20000,
+        amount: UNLOCK_FEE_NAIRA * 100, // Explicit mathematical conversion to kobo
         currency: 'NGN',
-
         callback: function(response) {
-          console.log('Payment Approved. Reference ID:', response.reference);
-          saveUnlockToDatabase(response.reference);
+          saveUnlockToDatabase(response.reference)
         },
         onClose: function() {
-          alert('Transaction cancelled. Your contact details remain hidden.');
+          alert('Transaction cancelled. Your contact details remain hidden.')
         }
-      });
+      })
 
-      handler.openIframe();
+      handler.openIframe()
     } catch (paystackError) {
-      console.error("Paystack initialization failed completely:", paystackError);
-      alert("Could not open payment window. Error: " + paystackError.message);
+      console.error("Paystack initialization failed completely:", paystackError)
+      alert("Could not open payment window. Error: " + paystackError.message)
     }
-  };
+  }
 
   return (
     <div
@@ -104,7 +139,6 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
         }}
         onClick={e => e.stopPropagation()}
       >
-
         {/* FULL SCREEN IMAGE VIEWER */}
         {showFullImg && (
           <div
@@ -133,7 +167,7 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
           </div>
         )}
 
-        {/* MAIN IMAGE */}
+        {/* HERO MEDIA CONTAINER */}
         <div style={{ position: "relative" }}>
           <img
             src={mainImg}
@@ -159,6 +193,7 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
           >
             <Ic d={I.x} s={16} />
           </button>
+          
           {l.verified && (
             <div style={{ position: "absolute", bottom: 12, left: 12 }}>
               <Badge color="#fff" bg="#0d1b5e">
@@ -175,7 +210,7 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
           )}
         </div>
 
-        {/* THUMBNAIL STRIP */}
+        {/* PHOTO STRIP GALLERY */}
         {l.images?.length > 1 && (
           <div style={{ display: "flex", gap: 6, padding: "8px 12px", background: "#f4f3ef", overflowX: "auto" }}>
             {l.images.map((img, idx) => (
@@ -198,11 +233,11 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
           </div>
         )}
 
-        {/* VIDEOS */}
+        {/* TOUR VIDEOS */}
         {l.videos?.length > 0 && (
           <div style={{ padding: "10px 16px", background: "#f4f3ef" }}>
             <p style={{ fontSize: "0.78rem", fontWeight: 600, color: "#374151", marginBottom: 8 }}>
-              Videos
+              Property Video Walkthrough
             </p>
             {l.videos.map((vid, idx) => (
               <video key={idx} src={vid} controls style={{ width: "100%", borderRadius: 10, marginBottom: 8, maxHeight: 220, display: "block" }} />
@@ -210,7 +245,7 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
           </div>
         )}
 
-        {/* CONTENT */}
+        {/* SHEET CONTENT */}
         <div style={{ padding: "22px 26px 28px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 10, marginBottom: 14 }}>
             <div>
@@ -231,7 +266,7 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
             </div>
           </div>
 
-          {/* STATS PILLS — Kitchen/Bath hidden for Land */}
+          {/* ATTRIBUTE TAGS */}
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", paddingBottom: 14, borderBottom: "1px solid #f0efea", marginBottom: 16 }}>
             {[
               !isLand ? `${l.kitchs || 0} Kitchen` : null,
@@ -244,7 +279,7 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
             ))}
           </div>
 
-          {/* AMENITIES */}
+          {/* AMENITIES LIST */}
           {l.amenities?.length > 0 && (
             <div style={{ marginBottom: 18 }}>
               <h4 style={{ fontWeight: 700, color: "#374151", fontSize: "0.8rem", letterSpacing: "0.05em", marginBottom: 9 }}>
@@ -260,8 +295,12 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
             </div>
           )}
 
-          {/* DYNAMIC ACTION SECTION */}
-          {l.status === 'rented' ? (
+          {/* TRANSACTION PROCESSING / DISPLAY REGION */}
+          {checkingAccess ? (
+            <div style={{ textAlign: "center", color: "#6b7280", fontSize: "0.88rem", padding: "12px" }}>
+              Verifying credentials access layer...
+            </div>
+          ) : l.status === 'rented' ? (
             <div style={{ background: "#fee2e2", border: "1px solid #fca5a5", borderRadius: 13, padding: "18px 20px", textAlign: "center" }}>
               <div style={{ fontSize: "1.5rem", marginBottom: 6 }}>🔑</div>
               <div style={{ fontWeight: 700, color: "#991b1b", fontSize: "0.96rem", marginBottom: 4 }}>
@@ -307,12 +346,12 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
                   </div>
                   <div style={{ color: "#6b7280", fontSize: "0.79rem" }}>
                     {isSale
-                      ? "One-time ₦200 fee to unlock the seller's direct contact."
-                      : "One-time ₦200 fee. No agent. No recurring charges."}
+                      ? `One-time ₦${UNLOCK_FEE_NAIRA} fee to unlock the seller's direct contact.`
+                      : `One-time ₦${UNLOCK_FEE_NAIRA} fee. No agent. No recurring charges.`}
                   </div>
                 </div>
                 <Btn onClick={handlePayment}>
-                  <Ic d={I.lock} s={14} /> Unlock for ₦200
+                  <Ic d={I.lock} s={14} /> Unlock for ₦{UNLOCK_FEE_NAIRA}
                 </Btn>
               </div>
             </div>
@@ -321,4 +360,4 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
       </div>
     </div>
   )
-        }
+}
