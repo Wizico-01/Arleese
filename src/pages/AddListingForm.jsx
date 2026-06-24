@@ -26,8 +26,11 @@ export default function AddListingForm({ onBack, onSubmit, user }) {
       form.images.forEach(url => {
         if (url.startsWith('blob:')) URL.revokeObjectURL(url)
       })
+      form.videos.forEach(url => {
+        if (url.startsWith('blob:')) URL.revokeObjectURL(url)
+      })
     }
-  }, [form.images])
+  }, [form.images, form.videos])
 
   const toggleAmenity = (a) => {
     set("amenities", form.amenities.includes(a)
@@ -62,48 +65,72 @@ export default function AddListingForm({ onBack, onSubmit, user }) {
   const handleSubmit = async () => {
     setLoading(true)
     setErr("")
+
+    // --- MEDIA VALIDATION RULES ---
+    const hasImages = form.imageFiles && form.imageFiles.length > 0
+    const hasVideos = form.videoFiles && form.videoFiles.length > 0
+
+    if (listingType === 'rent' && !hasImages) {
+      setErr("You must upload at least one photo to list an apartment for rent.")
+      setLoading(false)
+      return
+    }
+
+    if (listingType === 'sale' && !hasImages && !hasVideos) {
+      setErr("Please upload at least one photo or video tour to list your property for sale.")
+      setLoading(false)
+      return
+    }
+
     try {
       let imageUrls = []
       let idx = 0
 
-      for (const imgFile of form.imageFiles || []) {
-        const uniqueId = `${Date.now()}-${idx}-${Math.random().toString(36).substring(5)}`
-        const filePath = `${uniqueId}-${imgFile.name}`
-        
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('apartment-images')
-          .upload(filePath, imgFile)
-
-        if (uploadError) throw new Error(`Image upload failed: ${uploadError.message}`)
-
-        if (uploadData) {
-          const { data: urlData } = supabase.storage
+      // Handle Optional/Compulsory Images
+      if (hasImages) {
+        for (const imgFile of form.imageFiles) {
+          const uniqueId = `${Date.now()}-${idx}-${Math.random().toString(36).substring(5)}`
+          const filePath = `${uniqueId}-${imgFile.name}`
+          
+          const { data: uploadData, error: uploadError } = await supabase.storage
             .from('apartment-images')
-            .getPublicUrl(filePath)
-          imageUrls.push(urlData.publicUrl)
+            .upload(filePath, imgFile)
+
+          if (uploadError) throw new Error(`Image upload failed: ${uploadError.message}`)
+
+          if (uploadData) {
+            const { data: urlData } = supabase.storage
+              .from('apartment-images')
+              .getPublicUrl(filePath)
+            imageUrls.push(urlData.publicUrl)
+          }
+          idx++
         }
-        idx++
       }
 
       let videoUrls = []
       let vIdx = 0
-      for (const vidFile of form.videoFiles || []) {
-        const uniqueId = `${Date.now()}-${vIdx}-${Math.random().toString(36).substring(5)}`
-        const filePath = `videos/${uniqueId}-${vidFile.name}`
-        
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('apartment-images')
-          .upload(filePath, vidFile)
-
-        if (uploadError) throw new Error(`Video upload failed: ${uploadError.message}`)
-
-        if (uploadData) {
-          const { data: urlData } = supabase.storage
+      
+      // Handle Optional Videos
+      if (hasVideos) {
+        for (const vidFile of form.videoFiles) {
+          const uniqueId = `${Date.now()}-${vIdx}-${Math.random().toString(36).substring(5)}`
+          const filePath = `videos/${uniqueId}-${vidFile.name}`
+          
+          const { data: uploadData, error: uploadError } = await supabase.storage
             .from('apartment-images')
-            .getPublicUrl(filePath)
-          videoUrls.push(urlData.publicUrl)
+            .upload(filePath, vidFile)
+
+          if (uploadError) throw new Error(`Video upload failed: ${uploadError.message}`)
+
+          if (uploadData) {
+            const { data: urlData } = supabase.storage
+              .from('apartment-images')
+              .getPublicUrl(filePath)
+            videoUrls.push(urlData.publicUrl)
+          }
+          vIdx++
         }
-        vIdx++
       }
 
       const { data, error } = await supabase.from('listings').insert({
@@ -268,7 +295,7 @@ export default function AddListingForm({ onBack, onSubmit, user }) {
                   <Field label="Bathrooms" type="number" value={form.baths} onChange={e => set("baths", e.target.value)} required />
                 </div>
               )}
-              {/* AMENITIES MAPPING */}
+              {/* AMENITIES MAPPING PLACEHOLDER */}
               <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
                 <Btn variant="secondary" onClick={() => setStep(1)}>← Back</Btn>
                 <Btn full onClick={() => { if (validateStep2()) setStep(3) }}>Continue →</Btn>
@@ -279,7 +306,10 @@ export default function AddListingForm({ onBack, onSubmit, user }) {
           {/* STEP 3 */}
           {step === 3 && (
             <div>
-              <h3 style={{ fontWeight: 700, color: "#0d1b5e", marginBottom: 6, fontSize: "1rem" }}>Photos & Review</h3>
+              <h3 style={{ fontWeight: 700, color: "#0d1b5e", marginBottom: 6, fontSize: "1rem" }}>
+                Photos {listingType === 'sale' ? <span style={{ fontWeight: 400, color: "#6b7280", fontSize: "0.85rem" }}>(Optional if video is attached)</span> : <span style={{ color: "#dc2626", fontSize: "0.85rem" }}>* Compulsory</span>}
+              </h3>
+              
               <div onClick={() => imgRef.current.click()} style={{ border: "2px dashed #d1d5db", borderRadius: 12, padding: "28px 16px", textAlign: "center", cursor: "pointer", background: "#fafafa", marginBottom: 14 }}>
                 <input ref={imgRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={e => {
                   const files = Array.from(e.target.files)
@@ -289,9 +319,9 @@ export default function AddListingForm({ onBack, onSubmit, user }) {
                   set("images", [...form.images, ...urls])
                   set("imageFiles", combined)
                 }} />
-                <p>Tap to upload photos</p>
+                <p>📸 Tap to upload photos</p>
               </div>
-              {/* PREVIEW CONTAINER */}
+              
               {form.images.length > 0 && (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 20 }}>
                   {form.images.map((img, i) => (
@@ -299,11 +329,39 @@ export default function AddListingForm({ onBack, onSubmit, user }) {
                   ))}
                 </div>
               )}
-              <Btn full onClick={handleSubmit} loading={loading}>Submit Listing</Btn>
+
+              <h3 style={{ fontWeight: 700, color: "#0d1b5e", marginBottom: 6, marginTop: 20, fontSize: "1rem" }}>
+                Property Video Tour {listingType === 'sale' ? <span style={{ fontWeight: 400, color: "#6b7280", fontSize: "0.85rem" }}>(Optional if photos are attached)</span> : <span style={{ fontWeight: 400, color: "#6b7280", fontSize: "0.85rem" }}>(Optional)</span>}
+              </h3>
+              
+              <div onClick={() => videoRef.current.click()} style={{ border: "2px dashed #d1d5db", borderRadius: 12, padding: "28px 16px", textAlign: "center", cursor: "pointer", background: "#fafafa", marginBottom: 14 }}>
+                <input ref={videoRef} type="file" accept="video/*" multiple style={{ display: "none" }} onChange={e => {
+                  const files = Array.from(e.target.files)
+                  const combined = [...form.videoFiles, ...files]
+                  if (combined.length > 2) { setErr("Maximum 2 videos allowed."); return }
+                  const urls = files.map(f => URL.createObjectURL(f))
+                  set("videos", [...form.videos, ...urls])
+                  set("videoFiles", combined)
+                }} />
+                <p>🎥 Tap to upload videos</p>
+              </div>
+
+              {form.videos.length > 0 && (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8, marginBottom: 20 }}>
+                  {form.videos.map((vid, i) => (
+                    <video key={i} src={vid} controls style={{ width: "100%", height: 100, objectFit: "cover", borderRadius: 6 }} />
+                  ))}
+                </div>
+              )}
+
+              <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+                <Btn variant="secondary" onClick={() => setStep(2)}>← Back</Btn>
+                <Btn full onClick={handleSubmit} loading={loading}>Submit Listing</Btn>
+              </div>
             </div>
           )}
         </Card>
       </div>
     </div>
   )
-}
+      }
