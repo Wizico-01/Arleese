@@ -26,7 +26,12 @@ export default function App() {
   })
   const [user, setUser] = useState(null)
   const [pageHistory, setPageHistory] = useState(['home'])
-  const [showOnboarding, setShowOnboarding] = useState(true)
+  
+  // Smart Onboarding State: Check if user has already seen/dismissed it
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    const hasSeenOnboarding = localStorage.getItem('arleece_onboarding_seen')
+    return !hasSeenOnboarding
+  })
 
   // Auth session check
   useEffect(() => {
@@ -47,6 +52,9 @@ export default function App() {
     // Load session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
+        // Logged-in users shouldn't see onboarding
+        setShowOnboarding(false)
+        
         supabase
           .from('profiles')
           .select('*')
@@ -77,6 +85,7 @@ export default function App() {
         return
       }
       if (event === 'SIGNED_IN' && session) {
+        setShowOnboarding(false)
         if (window.location.hash.includes('type=recovery')) return
         supabase
           .from('profiles')
@@ -129,14 +138,17 @@ export default function App() {
     setPage(newPage)
   }
 
+  const dismissOnboarding = () => {
+    localStorage.setItem('arleece_onboarding_seen', 'true')
+    setShowOnboarding(false)
+  }
+
   const logout = async () => {
     await supabase.auth.signOut()
     setUser(null)
     setPageHistory(['home'])
     setPage('home')
     window.location.hash = 'home'
-    // Show onboarding again after logout
-    setShowOnboarding(true)
   }
 
   const renderPage = () => {
@@ -169,15 +181,15 @@ export default function App() {
   const hideNav = ['login', 'register', 'register-landlord'].includes(page)
   const hideBottom = ['login', 'register', 'register-landlord'].includes(page)
 
-  // SHOW ONBOARDING SLIDER FIRST
-  if (showOnboarding) {
+  // SHOW ONBOARDING SLIDER FIRST (IF NOT SEEN YET & NOT LOGGED IN)
+  if (showOnboarding && !user) {
     return (
       <OnboardingSlider
         setPage={(destination) => {
-          setShowOnboarding(false)
+          dismissOnboarding()
           navigateTo(destination)
         }}
-        onDismiss={() => setShowOnboarding(false)}
+        onDismiss={() => dismissOnboarding()}
       />
     )
   }
@@ -207,4 +219,4 @@ export default function App() {
       )}
     </div>
   )
-      }
+}
