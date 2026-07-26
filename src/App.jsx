@@ -25,11 +25,8 @@ export default function App() {
   const [user, setUser] = useState(null)
   const [pageHistory, setPageHistory] = useState(['home'])
   
-  // Smart Onboarding State: Check if user has already seen/dismissed it
-  const [showOnboarding, setShowOnboarding] = useState(() => {
-    const hasSeenOnboarding = localStorage.getItem('arleece_onboarding_seen')
-    return !hasSeenOnboarding
-  })
+  // Show onboarding slider every time a user opens or refreshes the page
+  const [showOnboarding, setShowOnboarding] = useState(true)
 
   // Auth session check
   useEffect(() => {
@@ -50,6 +47,7 @@ export default function App() {
     // Load session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
+        // Authenticated users bypass onboarding
         setShowOnboarding(false)
         
         supabase
@@ -136,7 +134,6 @@ export default function App() {
   }
 
   const dismissOnboarding = () => {
-    localStorage.setItem('arleece_onboarding_seen', 'true')
     setShowOnboarding(false)
   }
 
@@ -146,6 +143,7 @@ export default function App() {
     setPageHistory(['home'])
     setPage('home')
     window.location.hash = 'home'
+    setShowOnboarding(true)
   }
 
   const renderPage = () => {
@@ -176,7 +174,7 @@ export default function App() {
   const hideNav = ['login', 'register', 'register-landlord'].includes(page)
   const hideBottom = ['login', 'register', 'register-landlord'].includes(page)
 
-  // SHOW ONBOARDING SLIDER FIRST (IF NOT SEEN YET & NOT LOGGED IN)
+  // SHOW ONBOARDING SLIDER FIRST (IF USER IS NOT LOGGED IN)
   if (showOnboarding && !user) {
     return (
       <OnboardingSlider
@@ -214,4 +212,4 @@ export default function App() {
       )}
     </div>
   )
-}
+  }
