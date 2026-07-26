@@ -162,29 +162,7 @@ export default function OnboardingSlider({ setPage, onDismiss }) {
         pointerEvents: "none",
       }} />
 
-      {/* TOP BAR — BRAND LOGO IMAGE */}
-      <div style={{
-        position: "absolute",
-        top: 0,
-        left: 0,
-        right: 0,
-        padding: "48px 24px 16px",
-        display: "flex",
-        justifyState: "flex-start",
-        alignItems: "center",
-        zIndex: 4,
-      }}>
-        <img 
-          src="/logo.png" 
-          alt="Arleece Logo" 
-          style={{
-            height: "40px",
-            width: "auto",
-            objectFit: "contain",
-          }}
-        />
-      </div>
-
+  
       {/* SLIDE CONTENT */}
       <div style={{
         position: "absolute",
