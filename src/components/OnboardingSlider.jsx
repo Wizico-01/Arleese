@@ -7,35 +7,35 @@ const slides = [
     subtext: "No agents. No 20% commission. No inspection fees. Just you and the landlord.",
     cta: "Get Started",
     ctaAction: "register",
-    secondaryCta: "Sign In",
+    secondaryCta: "Log In",
     secondaryAction: "login",
   },
   {
     video: "https://res.cloudinary.com/dbge3ag4t/video/upload/v1785065740/InShot_20260726_013916377_xays0n.mp4",
     headline: "Browse Verified Apartments Across All 36 States.",
     subtext: "Thousands of real listings uploaded directly by landlords. What you see is what you get.",
-    cta: "Browse Apartments",
-    ctaAction: "browse",
-    secondaryCta: "Skip",
-    secondaryAction: "skip",
+    cta: "Create Free Account",
+    ctaAction: "register",
+    secondaryCta: "Log In",
+    secondaryAction: "login",
   },
   {
     video: "https://res.cloudinary.com/dbge3ag4t/video/upload/v1785065740/InShot_20260725_203202198_uytkox.mp4",
     headline: "Pay ₦200. Get the Landlord's Direct Contact.",
     subtext: "One flat fee. No recurring charges. Call the landlord yourself, negotiate your own terms, move in your way.",
-    cta: "Create Free Account",
+    cta: "Sign Up Now",
     ctaAction: "register",
-    secondaryCta: "Sign In",
+    secondaryCta: "Log In",
     secondaryAction: "login",
   },
   {
     video: "https://res.cloudinary.com/dbge3ag4t/video/upload/v1785065739/InShot_20260725_202314668_jihvi1.mp4",
     headline: "Sell or Rent Your Property Directly to Buyers.",
     subtext: "Landlords list for free. Tenants and buyers contact you directly. Zero agent commission. Ever.",
-    cta: "List Your Property Free",
+    cta: "List Property (Sign Up)",
     ctaAction: "register-landlord",
-    secondaryCta: "Browse First",
-    secondaryAction: "browse",
+    secondaryCta: "Log In",
+    secondaryAction: "login",
   },
 ]
 
@@ -55,7 +55,6 @@ export default function OnboardingSlider({ setPage, onDismiss }) {
     videoRefs.current.forEach((video, idx) => {
       if (!video) return
       
-      // Force native properties to prevent mobile autoplay restrictions
       video.muted = true
       video.defaultMuted = true
       video.setAttribute('playsinline', '')
@@ -109,10 +108,6 @@ export default function OnboardingSlider({ setPage, onDismiss }) {
 
   const handleCta = (action) => {
     clearAutoPlay()
-    if (action === 'skip') {
-      onDismiss()
-      return
-    }
     onDismiss()
     setPage(action)
   }
@@ -158,53 +153,36 @@ export default function OnboardingSlider({ setPage, onDismiss }) {
         />
       ))}
 
-      {/* DARK OVERLAY — makes text readable over any video */}
+      {/* DARK OVERLAY */}
       <div style={{
         position: "absolute",
         inset: 0,
-        background: "linear-gradient(to bottom, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.15) 40%, rgba(0,0,0,0.75) 75%, rgba(0,0,0,0.92) 100%)",
+        background: "linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.15) 40%, rgba(0,0,0,0.8) 75%, rgba(0,0,0,0.95) 100%)",
         zIndex: 2,
         pointerEvents: "none",
       }} />
 
-      {/* TOP BAR — Logo + Skip */}
+      {/* TOP BAR — BRAND LOGO IMAGE */}
       <div style={{
         position: "absolute",
         top: 0,
         left: 0,
         right: 0,
-        padding: "52px 24px 16px",
+        padding: "48px 24px 16px",
         display: "flex",
-        justifySpace: "space-between",
+        justifyState: "flex-start",
         alignItems: "center",
         zIndex: 4,
       }}>
-        <div style={{
-          fontFamily: "'DM Serif Display', serif",
-          color: "#fff",
-          fontSize: "1.4rem",
-          fontWeight: 700,
-          letterSpacing: "0.04em",
-        }}>
-          ARLEECE
-        </div>
-        <button
-          onClick={() => handleCta('skip')}
+        <img 
+          src="/logo.png" 
+          alt="Arleece Logo" 
           style={{
-            background: "rgba(255,255,255,0.15)",
-            border: "1px solid rgba(255,255,255,0.25)",
-            color: "#fff",
-            borderRadius: 20,
-            padding: "6px 16px",
-            fontSize: "0.78rem",
-            fontWeight: 600,
-            cursor: "pointer",
-            fontFamily: "inherit",
-            backdropFilter: "blur(8px)",
+            height: "40px",
+            width: "auto",
+            objectFit: "contain",
           }}
-        >
-          Skip
-        </button>
+        />
       </div>
 
       {/* SLIDE CONTENT */}
@@ -213,7 +191,7 @@ export default function OnboardingSlider({ setPage, onDismiss }) {
         bottom: 0,
         left: 0,
         right: 0,
-        padding: "0 24px 52px",
+        padding: "0 24px 44px",
         zIndex: 4,
         opacity: animating ? 0 : 1,
         transform: animating ? "translateY(12px)" : "translateY(0)",
@@ -224,7 +202,7 @@ export default function OnboardingSlider({ setPage, onDismiss }) {
         <div style={{
           display: "flex",
           gap: 6,
-          marginBottom: 28,
+          marginBottom: 24,
         }}>
           {slides.map((_, idx) => (
             <div
@@ -248,7 +226,7 @@ export default function OnboardingSlider({ setPage, onDismiss }) {
           color: "#fff",
           fontSize: "clamp(1.6rem, 5vw, 2.2rem)",
           lineHeight: 1.2,
-          marginBottom: 14,
+          marginBottom: 12,
           fontWeight: 700,
         }}>
           {slide.headline}
@@ -256,16 +234,16 @@ export default function OnboardingSlider({ setPage, onDismiss }) {
 
         {/* SUBTEXT */}
         <p style={{
-          color: "rgba(255,255,255,0.82)",
+          color: "rgba(255,255,255,0.85)",
           fontSize: "0.9rem",
-          lineHeight: 1.7,
-          marginBottom: 32,
+          lineHeight: 1.6,
+          marginBottom: 28,
           maxWidth: 420,
         }}>
           {slide.subtext}
         </p>
 
-        {/* PRIMARY CTA BUTTON */}
+        {/* PRIMARY CTA (SIGN UP / REGISTER) */}
         <button
           onClick={() => handleCta(slide.ctaAction)}
           style={{
@@ -286,7 +264,7 @@ export default function OnboardingSlider({ setPage, onDismiss }) {
           {slide.cta}
         </button>
 
-        {/* SECONDARY CTA BUTTON */}
+        {/* SECONDARY CTA (LOG IN) */}
         <button
           onClick={() => handleCta(slide.secondaryAction)}
           style={{
@@ -307,7 +285,7 @@ export default function OnboardingSlider({ setPage, onDismiss }) {
         </button>
       </div>
 
-      {/* SWIPE GESTURE AREA */}
+      {/* SWIPE / TAP GESTURE AREA */}
       <div
         style={{
           position: "absolute",
@@ -333,4 +311,4 @@ export default function OnboardingSlider({ setPage, onDismiss }) {
       />
     </div>
   )
-                }
+      }
