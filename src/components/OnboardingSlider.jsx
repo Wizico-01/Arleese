@@ -54,9 +54,21 @@ export default function OnboardingSlider({ setPage, onDismiss }) {
     // Play current video, pause others
     videoRefs.current.forEach((video, idx) => {
       if (!video) return
+      
+      // Force native properties to prevent mobile autoplay restrictions
+      video.muted = true
+      video.defaultMuted = true
+      video.setAttribute('playsinline', '')
+      video.setAttribute('webkit-playsinline', '')
+
       if (idx === current) {
         video.currentTime = 0
-        video.play().catch(() => {})
+        const playPromise = video.play()
+        if (playPromise !== undefined) {
+          playPromise.catch((error) => {
+            console.warn("Autoplay prevented:", error)
+          })
+        }
       } else {
         video.pause()
       }
@@ -120,12 +132,19 @@ export default function OnboardingSlider({ setPage, onDismiss }) {
       {slides.map((s, idx) => (
         <video
           key={idx}
-          ref={el => videoRefs.current[idx] = el}
+          ref={el => {
+            videoRefs.current[idx] = el
+            if (el) {
+              el.muted = true
+              el.defaultMuted = true
+            }
+          }}
           src={s.video}
           muted
           loop
           playsInline
           autoPlay={idx === 0}
+          preload="auto"
           style={{
             position: "absolute",
             inset: 0,
@@ -145,6 +164,7 @@ export default function OnboardingSlider({ setPage, onDismiss }) {
         inset: 0,
         background: "linear-gradient(to bottom, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.15) 40%, rgba(0,0,0,0.75) 75%, rgba(0,0,0,0.92) 100%)",
         zIndex: 2,
+        pointerEvents: "none",
       }} />
 
       {/* TOP BAR — Logo + Skip */}
@@ -155,9 +175,9 @@ export default function OnboardingSlider({ setPage, onDismiss }) {
         right: 0,
         padding: "52px 24px 16px",
         display: "flex",
-        justifyContent: "space-between",
+        justifySpace: "space-between",
         alignItems: "center",
-        zIndex: 3,
+        zIndex: 4,
       }}>
         <div style={{
           fontFamily: "'DM Serif Display', serif",
@@ -194,7 +214,7 @@ export default function OnboardingSlider({ setPage, onDismiss }) {
         left: 0,
         right: 0,
         padding: "0 24px 52px",
-        zIndex: 3,
+        zIndex: 4,
         opacity: animating ? 0 : 1,
         transform: animating ? "translateY(12px)" : "translateY(0)",
         transition: "opacity 0.3s ease, transform 0.3s ease",
@@ -292,14 +312,13 @@ export default function OnboardingSlider({ setPage, onDismiss }) {
         style={{
           position: "absolute",
           inset: 0,
-          zIndex: 2,
+          zIndex: 3,
           cursor: "pointer",
         }}
         onClick={(e) => {
           const x = e.clientX
           const width = window.innerWidth
           if (x < width / 2) {
-            // Tapped left — go back
             clearAutoPlay()
             setAnimating(true)
             setTimeout(() => {
@@ -307,7 +326,6 @@ export default function OnboardingSlider({ setPage, onDismiss }) {
               setAnimating(false)
             }, 300)
           } else {
-            // Tapped right — go forward
             clearAutoPlay()
             goToNext()
           }
@@ -315,4 +333,4 @@ export default function OnboardingSlider({ setPage, onDismiss }) {
       />
     </div>
   )
-      }
+                }
