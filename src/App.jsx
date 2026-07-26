@@ -11,7 +11,6 @@ import RegisterPage from './pages/RegisterPage'
 import DashboardPage from './pages/DashboardPage'
 import ProfilePage from './pages/ProfilePage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
-import ScoutDashboard from './pages/ScoutDashboard'
 import OnboardingSlider from './components/OnboardingSlider'
 
 export default function App() {
@@ -19,8 +18,7 @@ export default function App() {
     const hash = window.location.hash.replace('#', '').split('?')[0].split('&')[0]
     const validPages = [
       'home', 'browse', 'login', 'register', 'register-landlord',
-      'dashboard', 'profile', 'terms', 'saved', 'scout-dashboard',
-      'reset-password'
+      'dashboard', 'profile', 'terms', 'saved', 'reset-password'
     ]
     return validPages.includes(hash) ? hash : 'home'
   })
@@ -52,7 +50,6 @@ export default function App() {
     // Load session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        // Logged-in users shouldn't see onboarding
         setShowOnboarding(false)
         
         supabase
@@ -171,8 +168,6 @@ export default function App() {
         return <ProfilePage user={user} setPage={navigateTo} logout={logout} />
       case 'reset-password':
         return <ResetPasswordPage setPage={navigateTo} />
-      case 'scout-dashboard':
-        return <ScoutDashboard user={user} setPage={navigateTo} />
       default:
         return <HomePage setPage={navigateTo} user={user} />
     }
