@@ -11,84 +11,100 @@ import RegisterPage from './pages/RegisterPage'
 import DashboardPage from './pages/DashboardPage'
 import ProfilePage from './pages/ProfilePage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
+import ScoutDashboard from './pages/ScoutDashboard'
+import OnboardingSlider from './components/OnboardingSlider'
 
 export default function App() {
   const [page, setPage] = useState(() => {
     const hash = window.location.hash.replace('#', '').split('?')[0].split('&')[0]
-    // ✅ FIXED: Whitelisted 'reset-password' so the hash parsing hook doesn't boot you to home!
-    const validPages = ['home', 'browse', 'login', 'register', 'dashboard', 'profile', 'terms', 'saved', 'unlocked-contacts', 'reset-password']
+    const validPages = [
+      'home', 'browse', 'login', 'register', 'register-landlord',
+      'dashboard', 'profile', 'terms', 'saved', 'scout-dashboard',
+      'reset-password'
+    ]
     return validPages.includes(hash) ? hash : 'home'
   })
   const [user, setUser] = useState(null)
   const [pageHistory, setPageHistory] = useState(['home'])
+  const [showOnboarding, setShowOnboarding] = useState(true)
 
+  // Auth session check
   useEffect(() => {
-  const hash = window.location.hash
-  const params = new URLSearchParams(hash.replace('#', ''))
-  const type = params.get('type')
-  const accessToken = params.get('access_token')
+    // Check for password recovery token in URL FIRST
+    const fullUrl = window.location.href
+    const hashString = window.location.hash
 
-  // ONLY go to reset-password for recovery type
-  // Do NOT redirect confirmation emails there
-  if (type === 'recovery' && accessToken) {
-    setPage('reset-password')
-    // Don't return — still load the session below
-  }
-
-  // For email confirmation (type=signup), just let Supabase handle it
-  // and load the user session normally
-  supabase.auth.getSession().then(({ data: { session } }) => {
-    if (session) {
-      supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', session.user.id)
-        .single()
-        .then(({ data: profile }) => {
-          if (profile) {
-            setUser({
-              id: session.user.id,
-              email: session.user.email,
-              name: profile.full_name,
-              role: profile.role,
-              verified: profile.nin_verified,
-            })
-          }
-        })
-    }
-  })
-
-  const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-    if (event === 'PASSWORD_RECOVERY') {
+    if (
+      hashString.includes('type=recovery') ||
+      hashString.includes('access_token') ||
+      fullUrl.includes('type=recovery')
+    ) {
       setPage('reset-password')
+      setShowOnboarding(false)
       return
     }
-    if (event === 'SIGNED_IN' && session) {
-      if (window.location.hash.includes('type=recovery')) return
-      supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', session.user.id)
-        .single()
-        .then(({ data: profile }) => {
-          if (profile) {
-            setUser({
-              id: session.user.id,
-              email: session.user.email,
-              name: profile.full_name,
-              role: profile.role,
-              verified: profile.nin_verified,
-            })
-          }
-        })
-    }
-    if (event === 'SIGNED_OUT') {
-      setUser(null)
-    }
-  })
 
-  return () => subscription.unsubscribe()
-}, [])
+    // Load session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single()
+          .then(({ data: profile }) => {
+            if (profile) {
+              setUser({
+                id: session.user.id,
+                email: session.user.email,
+                name: profile.full_name,
+                role: profile.role,
+                verified: profile.nin_verified,
+                bank_name: profile.bank_name,
+                account_number: profile.account_number,
+                account_name: profile.account_name,
+              })
+            }
+          })
+      }
+    })
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setPage('reset-password')
+        setShowOnboarding(false)
+        return
+      }
+      if (event === 'SIGNED_IN' && session) {
+        if (window.location.hash.includes('type=recovery')) return
+        supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single()
+          .then(({ data: profile }) => {
+            if (profile) {
+              setUser({
+                id: session.user.id,
+                email: session.user.email,
+                name: profile.full_name,
+                role: profile.role,
+                verified: profile.nin_verified,
+                bank_name: profile.bank_name,
+                account_number: profile.account_number,
+                account_name: profile.account_name,
+              })
+            }
+          })
+      }
+      if (event === 'SIGNED_OUT') {
+        setUser(null)
+      }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
 
   // Handle browser back button
   useEffect(() => {
@@ -119,26 +135,52 @@ export default function App() {
     setPageHistory(['home'])
     setPage('home')
     window.location.hash = 'home'
+    // Show onboarding again after logout
+    setShowOnboarding(true)
   }
 
   const renderPage = () => {
     switch (page) {
-      case 'login':             return <LoginPage setPage={navigateTo} setUser={setUser} />
-      case 'register':          return <RegisterPage setPage={navigateTo} setUser={setUser} />
-      case 'register-landlord': return <RegisterPage setPage={navigateTo} setUser={setUser} defaultRole="landlord" />
-      case 'browse':            return <BrowsePage user={user} setPage={navigateTo} />
-      case 'dashboard':         return <DashboardPage user={user} setPage={navigateTo} />
-      case 'saved':             return <TenantDashboard user={user} setPage={navigateTo} />
-      case 'unlocked-contacts': return <TenantDashboard user={user} setPage={navigateTo} defaultTab="unlocked" />
-      case 'terms':             return <TermsPage setPage={navigateTo} />
-      case 'profile':           return <ProfilePage user={user} setPage={navigateTo} logout={logout} />
-      case 'reset-password':    return <ResetPasswordPage setPage={navigateTo} />
-      default:                  return <HomePage setPage={navigateTo} user={user} />
+      case 'login':
+        return <LoginPage setPage={navigateTo} setUser={setUser} />
+      case 'register':
+        return <RegisterPage setPage={navigateTo} setUser={setUser} />
+      case 'register-landlord':
+        return <RegisterPage setPage={navigateTo} setUser={setUser} defaultRole="landlord" />
+      case 'browse':
+        return <BrowsePage user={user} setPage={navigateTo} />
+      case 'dashboard':
+        return <DashboardPage user={user} setPage={navigateTo} />
+      case 'saved':
+        return <TenantDashboard user={user} setPage={navigateTo} />
+      case 'terms':
+        return <TermsPage setPage={navigateTo} />
+      case 'profile':
+        return <ProfilePage user={user} setPage={navigateTo} logout={logout} />
+      case 'reset-password':
+        return <ResetPasswordPage setPage={navigateTo} />
+      case 'scout-dashboard':
+        return <ScoutDashboard user={user} setPage={navigateTo} />
+      default:
+        return <HomePage setPage={navigateTo} user={user} />
     }
   }
 
-  const hideNav    = ['login', 'register', 'register-landlord', 'reset-password'].includes(page)
-  const hideBottom = ['login', 'register', 'register-landlord', 'reset-password'].includes(page)
+  const hideNav = ['login', 'register', 'register-landlord'].includes(page)
+  const hideBottom = ['login', 'register', 'register-landlord'].includes(page)
+
+  // SHOW ONBOARDING SLIDER FIRST
+  if (showOnboarding) {
+    return (
+      <OnboardingSlider
+        setPage={(destination) => {
+          setShowOnboarding(false)
+          navigateTo(destination)
+        }}
+        onDismiss={() => setShowOnboarding(false)}
+      />
+    )
+  }
 
   return (
     <div style={{
@@ -148,12 +190,21 @@ export default function App() {
       paddingBottom: hideBottom ? 0 : 65,
     }}>
       {!hideNav && (
-        <Navbar user={user} setPage={navigateTo} logout={logout} page={page} />
+        <Navbar
+          user={user}
+          setPage={navigateTo}
+          logout={logout}
+          page={page}
+        />
       )}
       {renderPage()}
       {!hideBottom && (
-        <BottomNav page={page} setPage={navigateTo} user={user} />
+        <BottomNav
+          page={page}
+          setPage={navigateTo}
+          user={user}
+        />
       )}
     </div>
   )
-}
+      }
