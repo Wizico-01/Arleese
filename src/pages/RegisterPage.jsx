@@ -12,6 +12,9 @@ export default function RegisterPage({ setPage, setUser, defaultRole }) {
     name: "", email: "", phone: "", password: "",
     confirm: "", state: "", nin: "",
     ninFile: null, utilFile: null, terms: false,
+    // Estate Developer Specific Fields
+    estateName: "", unitsAvailable: "", estateAddress: "",
+    unitTypes: "", developerLink: "", cacNumber: "",
   })
   const [showPw, setShowPw] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -24,29 +27,43 @@ export default function RegisterPage({ setPage, setUser, defaultRole }) {
     if (!form.name || !form.email || !form.phone || !form.password || !form.confirm || !form.state) {
       setErr("All fields are required."); return false
     }
+    if (role === 'estate_developer') {
+      if (!form.estateName || !form.unitsAvailable || !form.estateAddress || !form.unitTypes) {
+        setErr("Please fill in all required estate and company details."); return false
+      }
+    }
     if (form.password !== form.confirm) { setErr("Passwords do not match."); return false }
     if (form.password.length < 8) { setErr("Password must be at least 8 characters."); return false }
     if (!form.terms) { setErr("Please agree to the Terms of Service."); return false }
     setErr(""); return true
   }
 
-  // STEP 1 NEXT — for tenant only, sign up immediately
+  // STEP 1 NEXT — for tenant / developer / landlord account info
   const next = async () => {
     if (!validateInfo()) return
     setLoading(true)
     setErr("")
     try {
+      const metadata = {
+        full_name: form.name,
+        phone: form.phone,
+        state: form.state,
+        role: role,
+      }
+
+      if (role === 'estate_developer') {
+        metadata.estate_name = form.estateName
+        metadata.units_available = parseInt(form.unitsAvailable) || 0
+        metadata.estate_address = form.estateAddress
+        metadata.unit_types = form.unitTypes
+        metadata.developer_link = form.developerLink
+        metadata.cac_number = form.cacNumber
+      }
+
       const { data, error } = await supabase.auth.signUp({
         email: form.email,
         password: form.password,
-        options: {
-          data: {
-            full_name: form.name,
-            phone: form.phone,
-            state: form.state,
-            role: role,
-          }
-        }
+        options: { data: metadata }
       })
 
       if (error) {
@@ -55,8 +72,8 @@ export default function RegisterPage({ setPage, setUser, defaultRole }) {
         return
       }
 
-      if (role === 'landlord') {
-        // Go to NIN verification step
+      // Landlords and Estate Developers go to NIN Verification step
+      if (role === 'landlord' || role === 'estate_developer') {
         setLoading(false)
         setStep(2)
         return
@@ -77,8 +94,8 @@ export default function RegisterPage({ setPage, setUser, defaultRole }) {
     setLoading(false)
   }
 
-  // STEP 2 SUBMIT — landlord NIN verification
-  const submitLandlord = async () => {
+  // STEP 2 SUBMIT — landlord & developer NIN verification
+  const submitVerification = async () => {
     if (!form.nin || form.nin.length < 11) {
       setErr("Please enter a valid 11-digit NIN.")
       return
@@ -90,7 +107,6 @@ export default function RegisterPage({ setPage, setUser, defaultRole }) {
     setLoading(true)
     setErr("")
     try {
-      // Get current user session
       const { data: { user } } = await supabase.auth.getUser()
 
       if (user) {
@@ -108,10 +124,20 @@ export default function RegisterPage({ setPage, setUser, defaultRole }) {
             .upload(utilPath, form.utilFile)
         }
 
-        // Save NIN to profile
+        // Save NIN and metadata to profile
+        const updatePayload = { nin: form.nin }
+        if (role === 'estate_developer') {
+          updatePayload.estate_name = form.estateName
+          updatePayload.units_available = parseInt(form.unitsAvailable) || 0
+          updatePayload.estate_address = form.estateAddress
+          updatePayload.unit_types = form.unitTypes
+          updatePayload.developer_link = form.developerLink
+          updatePayload.cac_number = form.cacNumber
+        }
+
         await supabase
           .from('profiles')
-          .update({ nin: form.nin })
+          .update(updatePayload)
           .eq('id', user.id)
       }
 
@@ -119,7 +145,7 @@ export default function RegisterPage({ setPage, setUser, defaultRole }) {
         id: user?.id,
         name: form.name,
         email: form.email,
-        role: 'landlord',
+        role: role,
         verified: false,
       })
       setStep(3)
@@ -152,9 +178,9 @@ export default function RegisterPage({ setPage, setUser, defaultRole }) {
         }}>
           Account Created!
         </h2>
-        {role === "landlord" ? (
+        {role === "landlord" || role === "estate_developer" ? (
           <p style={{ color: "#6b7280", lineHeight: 1.75, marginBottom: 26 }}>
-            Your landlord account is under review. We'll verify your NIN within{" "}
+            Your {role === "estate_developer" ? "estate developer" : "landlord"} account is under review. We'll verify your details within{" "}
             <strong>24–48 hours</strong> and notify you by email.
           </p>
         ) : (
@@ -163,8 +189,8 @@ export default function RegisterPage({ setPage, setUser, defaultRole }) {
             Nigeria — zero agent fees.
           </p>
         )}
-        <Btn full onClick={() => setPage(role === "landlord" ? "dashboard" : "browse")}>
-          {role === "landlord" ? "Go to My Dashboard →" : "Browse Apartments →"}
+        <Btn full onClick={() => setPage(role === "landlord" || role === "estate_developer" ? "dashboard" : "browse")}>
+          {role === "landlord" || role === "estate_developer" ? "Go to My Dashboard →" : "Browse Apartments →"}
         </Btn>
       </div>
     </div>
@@ -205,12 +231,13 @@ export default function RegisterPage({ setPage, setUser, defaultRole }) {
               I am a…
             </p>
             <div style={{
-              display: "grid", gridTemplateColumns: "1fr 1fr",
-              gap: 14, marginBottom: 20,
+              display: "flex", flexDirection: "column",
+              gap: 12, marginBottom: 20,
             }}>
               {[
                 { r: "tenant", e: "🔍", t: "Tenant", d: "Looking for an apartment to rent" },
                 { r: "landlord", e: "🏠", t: "Landlord", d: "I have apartments to list and rent out" },
+                { r: "estate_developer", e: "🏢", t: "Estate Developer", d: "I manage multi-unit estates, layouts, or developments" },
               ].map(({ r, e, t, d }) => (
                 <div
                   key={r}
@@ -218,13 +245,15 @@ export default function RegisterPage({ setPage, setUser, defaultRole }) {
                   style={{
                     background: "#fff",
                     border: `2px solid ${role === r ? "#0d1b5e" : "#e8e8e0"}`,
-                    borderRadius: 14, padding: "20px 14px",
-                    cursor: "pointer", textAlign: "center",
+                    borderRadius: 14, padding: "18px 16px",
+                    cursor: "pointer", display: "flex", alignItems: "center", gap: 16,
                   }}
                 >
-                  <div style={{ fontSize: "2rem", marginBottom: 8 }}>{e}</div>
-                  <div style={{ fontWeight: 700, color: "#0d1b5e", marginBottom: 4 }}>{t}</div>
-                  <div style={{ fontSize: "0.76rem", color: "#6b7280" }}>{d}</div>
+                  <div style={{ fontSize: "2rem" }}>{e}</div>
+                  <div>
+                    <div style={{ fontWeight: 700, color: "#0d1b5e", marginBottom: 2, fontSize: "1rem" }}>{t}</div>
+                    <div style={{ fontSize: "0.78rem", color: "#6b7280" }}>{d}</div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -240,14 +269,14 @@ export default function RegisterPage({ setPage, setUser, defaultRole }) {
           </div>
         )}
 
-        {/* STEP 1 — PERSONAL INFO */}
+        {/* STEP 1 — PERSONAL INFO & ESTATE DETAILS */}
         {step === 1 && (
           <Card style={{ padding: "24px 20px" }}>
             <div style={{ display: "flex", gap: 6, marginBottom: 20 }}>
-              {(role === "landlord"
+              {(role === "landlord" || role === "estate_developer"
                 ? ["Account Info", "ID Verification"]
                 : ["Account Info"]
-              ).map((s, i) => (
+              ).map((s) => (
                 <div key={s} style={{ flex: 1 }}>
                   <div style={{
                     height: 3, borderRadius: 2,
@@ -298,6 +327,57 @@ export default function RegisterPage({ setPage, setUser, defaultRole }) {
               options={NG_STATES}
               required
             />
+
+            {/* ESTATE DEVELOPER FIELDS */}
+            {role === 'estate_developer' && (
+              <div style={{ marginTop: 18, marginBottom: 18, padding: "16px", background: "#f8fafc", borderRadius: 12, border: "1px solid #e2e8f0" }}>
+                <p style={{ fontWeight: 700, fontSize: "0.88rem", color: "#0d1b5e", marginBottom: 12 }}>
+                  🏢 Estate & Company Information
+                </p>
+
+                <Field
+                  label="Estate / Company Name"
+                  placeholder="e.g. Greenfield Estate or Lekki Phase 3"
+                  value={form.estateName}
+                  onChange={e => set("estateName", e.target.value)}
+                  required
+                />
+                <Field
+                  label="Number of Units Available"
+                  type="number"
+                  placeholder="e.g. 24"
+                  value={form.unitsAvailable}
+                  onChange={e => set("unitsAvailable", e.target.value)}
+                  required
+                />
+                <Field
+                  label="Estate Location / Address"
+                  placeholder="e.g. Along Orchid Road, Lekki, Lagos"
+                  value={form.estateAddress}
+                  onChange={e => set("estateAddress", e.target.value)}
+                  required
+                />
+                <Field
+                  label="Type of Units Available"
+                  placeholder="e.g. 2-Bed Apartments, 3-Bed Terraces"
+                  value={form.unitTypes}
+                  onChange={e => set("unitTypes", e.target.value)}
+                  required
+                />
+                <Field
+                  label="Developer Website or Social Media (Optional)"
+                  placeholder="https://instagram.com/yourbrand"
+                  value={form.developerLink}
+                  onChange={e => set("developerLink", e.target.value)}
+                />
+                <Field
+                  label="CAC Registration Number (Optional)"
+                  placeholder="e.g. RC 1234567"
+                  value={form.cacNumber}
+                  onChange={e => set("cacNumber", e.target.value)}
+                />
+              </div>
+            )}
 
             {/* PASSWORD */}
             <div style={{ marginBottom: 16 }}>
@@ -354,32 +434,32 @@ export default function RegisterPage({ setPage, setUser, defaultRole }) {
             />
 
             <label style={{ display: "flex", alignItems: "flex-start", gap: 9, cursor: "pointer", marginBottom: 20, fontSize: "0.82rem", color: "#374151" }}>
-  <input
-    type="checkbox"
-    checked={form.terms}
-    onChange={e => set("terms", e.target.checked)}
-    style={{ marginTop: 2, accentColor: "#0d1b5e", width: 14, height: 14, flexShrink: 0 }}
-  />
-  I agree to Arleece's{" "}
-  <span
-    onClick={e => { e.preventDefault(); e.stopPropagation(); setPage('terms'); }}
-    style={{ color: "#1e3db5", fontWeight: 600, cursor: "pointer", textDecoration: "underline" }}
-  >
-    Terms of Service
-  </span>
-  {" "}and{" "}
-  <span
-    onClick={e => { e.preventDefault(); e.stopPropagation(); setPage('terms'); }}
-    style={{ color: "#1e3db5", fontWeight: 600, cursor: "pointer", textDecoration: "underline" }}
-  >
-    Privacy Policy
-  </span>
-</label>
+              <input
+                type="checkbox"
+                checked={form.terms}
+                onChange={e => set("terms", e.target.checked)}
+                style={{ marginTop: 2, accentColor: "#0d1b5e", width: 14, height: 14, flexShrink: 0 }}
+              />
+              I agree to Arleece's{" "}
+              <span
+                onClick={e => { e.preventDefault(); e.stopPropagation(); setPage('terms'); }}
+                style={{ color: "#1e3db5", fontWeight: 600, cursor: "pointer", textDecoration: "underline" }}
+              >
+                Terms of Service
+              </span>
+              {" "}and{" "}
+              <span
+                onClick={e => { e.preventDefault(); e.stopPropagation(); setPage('terms'); }}
+                style={{ color: "#1e3db5", fontWeight: 600, cursor: "pointer", textDecoration: "underline" }}
+              >
+                Privacy Policy
+              </span>
+            </label>
 
             <Btn full onClick={next} disabled={loading}>
               {loading
                 ? "Processing…"
-                : role === "landlord"
+                : role === "landlord" || role === "estate_developer"
                   ? "Continue to Verification →"
                   : "Create Account"}
             </Btn>
@@ -398,7 +478,7 @@ export default function RegisterPage({ setPage, setUser, defaultRole }) {
           </Card>
         )}
 
-        {/* STEP 2 — LANDLORD NIN VERIFICATION */}
+        {/* STEP 2 — NIN & ID VERIFICATION (LANDLORD & DEVELOPER) */}
         {step === 2 && (
           <Card style={{ padding: "24px 20px" }}>
             <div style={{ display: "flex", gap: 6, marginBottom: 20 }}>
@@ -430,8 +510,7 @@ export default function RegisterPage({ setPage, setUser, defaultRole }) {
                 ⚠️ Identity Verification Required
               </p>
               <p style={{ fontSize: "0.8rem", color: "#78350f", lineHeight: 1.65 }}>
-                All landlords must verify their NIN before listing.
-                This protects tenants from fraud.
+                All {role === 'estate_developer' ? 'estate developers' : 'landlords'} must verify their NIN before listing to protect tenants from fraud.
               </p>
             </div>
 
@@ -551,7 +630,7 @@ export default function RegisterPage({ setPage, setUser, defaultRole }) {
               You'll get an email once verified.
             </div>
 
-            <Btn full onClick={submitLandlord} disabled={loading}>
+            <Btn full onClick={submitVerification} disabled={loading}>
               {loading ? "Submitting…" : "Submit & Create Account"}
             </Btn>
             <button
