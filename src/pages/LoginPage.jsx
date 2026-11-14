@@ -60,7 +60,11 @@ export default function LoginPage({ setPage, setUser }) {
         role: profile.role,
         verified: profile.nin_verified,
       })
-      setPage(profile.role === 'landlord' ? 'dashboard' : 'browse')
+      setPage(
+  profile.role === 'landlord' ? 'dashboard' :
+  profile.role === 'logistics' ? 'logistics' :
+  'browse'
+)
 
     } catch (e) {
       setErr("Connection failed. Check your internet and try again.")

@@ -6,11 +6,12 @@ import ListingCard from '../components/ListingCard'
 import ListingModal from '../components/modals/ListingModal'
 import UnlockModal from '../components/modals/UnlockModal'
 import { NG_STATES, PROP_TYPES } from '../data/constants'
+import { Lock, CheckCircle, Home, Tag, Phone, ShieldCheck, Ban } from 'lucide-react'
 
 const isMobile = () => window.innerWidth < 768
 
 export default function BrowsePage({ user, setPage }) {
-  const [listingType, setListingType] = useState('rent') // 'rent' or 'sale'
+  const [listingType, setListingType] = useState('rent')
   const [listings, setListings] = useState([])
   const [search, setSearch] = useState("")
   const [fState, setFState] = useState("")
@@ -26,6 +27,7 @@ export default function BrowsePage({ user, setPage }) {
 
   useEffect(() => {
     const fetchListings = async () => {
+      if (!user) return
       const { data } = await supabase
         .from('listings')
         .select('*')
@@ -38,8 +40,165 @@ export default function BrowsePage({ user, setPage }) {
     const onResize = () => setMobile(isMobile())
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
-  }, [listingType])
+  }, [listingType, user])
 
+  // REGISTRATION WALL
+  if (!user) {
+    return (
+      <div style={{ minHeight: "100vh", background: "#f4f3ef" }}>
+
+        {/* HERO */}
+        <div style={{
+          background: "linear-gradient(135deg,#060e33,#0d1b5e)",
+          padding: "60px 24px 50px",
+          textAlign: "center",
+        }}>
+          <h1 style={{
+            fontFamily: "'DM Serif Display',serif",
+            color: "#fff",
+            fontSize: "2rem",
+            marginBottom: 12,
+            lineHeight: 1.3,
+          }}>
+            Find Your Home Directly
+            <br />
+            <span style={{ color: "#7eb3ff", fontStyle: "italic" }}>
+              from the Landlord
+            </span>
+          </h1>
+          <p style={{
+            color: "rgba(255,255,255,.7)",
+            fontSize: "0.95rem",
+            lineHeight: 1.7,
+          }}>
+            No agents. No inspection fees. No 20% commission.
+          </p>
+        </div>
+
+        {/* LOCK SECTION */}
+        <div style={{
+          maxWidth: 480,
+          margin: "0 auto",
+          padding: "40px 24px",
+          textAlign: "center",
+        }}>
+
+          {/* LOCK ICON */}
+          <div style={{
+            width: 80, height: 80,
+            borderRadius: "50%",
+            background: "#0d1b5e",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            margin: "0 auto 24px",
+          }}>
+            <Lock size={34} strokeWidth={1.8} color="#fff" />
+          </div>
+
+          <h2 style={{
+            fontFamily: "'DM Serif Display',serif",
+            color: "#0d1b5e",
+            fontSize: "1.5rem",
+            marginBottom: 12,
+          }}>
+            Sign Up to View Apartments
+          </h2>
+
+          <p style={{
+            color: "#6b7280",
+            fontSize: "0.9rem",
+            lineHeight: 1.75,
+            marginBottom: 32,
+          }}>
+            Join thousands of Nigerians already renting and buying
+            directly from landlords — zero agent fees, zero commission.
+            Create your free account to unlock all listings.
+          </p>
+
+          {/* BENEFITS CARD */}
+          <div style={{
+            background: "#fff",
+            borderRadius: 16,
+            padding: "22px 20px",
+            border: "1px solid #e8e8e0",
+            marginBottom: 28,
+            textAlign: "left",
+          }}>
+            <p style={{
+              fontWeight: 700,
+              color: "#0d1b5e",
+              fontSize: "0.85rem",
+              marginBottom: 16,
+              textAlign: "center",
+            }}>
+              What you get with a free account
+            </p>
+
+            {[
+              { icon: <Home size={16} strokeWidth={1.8} color="#0d1b5e" />, text: "Browse all vacant apartments across 36 states" },
+              { icon: <Tag size={16} strokeWidth={1.8} color="#0d1b5e" />, text: "View properties for sale — land, duplex, bungalow" },
+              { icon: <Phone size={16} strokeWidth={1.8} color="#0d1b5e" />, text: "Unlock direct landlord contacts for just ₦200" },
+              { icon: <ShieldCheck size={16} strokeWidth={1.8} color="#0d1b5e" />, text: "Verified listings only — no fake apartments" },
+              { icon: <Ban size={16} strokeWidth={1.8} color="#0d1b5e" />, text: "Zero agent fees. Zero inspection fees. Always." },
+            ].map((item, idx) => (
+              <div key={idx} style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                padding: "10px 0",
+                borderBottom: idx < 4 ? "1px solid #f4f3ef" : "none",
+                fontSize: "0.84rem",
+                color: "#374151",
+                lineHeight: 1.5,
+              }}>
+                <div style={{ flexShrink: 0 }}>{item.icon}</div>
+                {item.text}
+              </div>
+            ))}
+          </div>
+
+          {/* SIGN UP BUTTON */}
+          <button
+            onClick={() => setPage('register')}
+            style={{
+              width: "100%",
+              background: "#0d1b5e",
+              color: "#fff",
+              border: "none",
+              borderRadius: 12,
+              padding: "16px 0",
+              fontSize: "1rem",
+              fontWeight: 700,
+              cursor: "pointer",
+              fontFamily: "inherit",
+              marginBottom: 12,
+            }}
+          >
+            Create Free Account
+          </button>
+
+          {/* LOGIN LINK */}
+          <p style={{ color: "#6b7280", fontSize: "0.85rem" }}>
+            Already have an account?{" "}
+            <span
+              onClick={() => setPage('login')}
+              style={{
+                color: "#0d1b5e",
+                fontWeight: 700,
+                cursor: "pointer",
+                textDecoration: "underline",
+              }}
+            >
+              Sign In
+            </span>
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  // LOGGED IN — show full browse page
   let results = listings.filter(l => {
     if (fState && l.state !== fState) return false
     if (fType && l.type !== fType) return false
@@ -102,7 +261,7 @@ export default function BrowsePage({ user, setPage }) {
   return (
     <div style={{ background: "#f4f3ef", minHeight: "100vh" }}>
 
-      {/* ── SEARCH BAR ── */}
+      {/* SEARCH BAR */}
       <div style={{ background: "linear-gradient(135deg,#060e33,#0d1b5e)", padding: "36px 24px 30px" }}>
         <div style={{ maxWidth: 860, margin: "0 auto" }}>
           <h1 style={{ fontFamily: "'DM Serif Display',serif", color: "#fff", fontSize: "1.75rem", marginBottom: 5 }}>
@@ -130,7 +289,7 @@ export default function BrowsePage({ user, setPage }) {
                 transition: "all .2s",
               }}
             >
-              🏠 Rent
+              Rent
             </button>
             <button
               onClick={() => setListingType('sale')}
@@ -144,7 +303,7 @@ export default function BrowsePage({ user, setPage }) {
                 transition: "all .2s",
               }}
             >
-              🏷️ Buy
+              Buy
             </button>
           </div>
 
@@ -180,8 +339,8 @@ export default function BrowsePage({ user, setPage }) {
               justifyContent: "space-between", fontFamily: "inherit",
             }}
           >
-            <span>🔧 Filters</span>
-            <span>{showFilters ? "▲ Hide" : "▼ Show"}</span>
+            <span>Filters</span>
+            <span>{showFilters ? "Hide" : "Show"}</span>
           </button>
         )}
 
@@ -197,7 +356,7 @@ export default function BrowsePage({ user, setPage }) {
             </aside>
           )}
 
-          {/* ── RESULTS ── */}
+          {/* RESULTS */}
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 18 }}>
               <p style={{ fontSize: "0.86rem", color: "#374151" }}>
@@ -212,8 +371,8 @@ export default function BrowsePage({ user, setPage }) {
                 <select value={sort} onChange={e => setSort(e.target.value)}
                   style={{ padding: "7px 11px", border: "1.5px solid #e5e7eb", borderRadius: 8, fontSize: "0.82rem", background: "#fff", fontFamily: "inherit" }}>
                   <option value="newest">Newest First</option>
-                  <option value="price-asc">Price: Low → High</option>
-                  <option value="price-desc">Price: High → Low</option>
+                  <option value="price-asc">Price: Low to High</option>
+                  <option value="price-desc">Price: High to Low</option>
                 </select>
                 <div style={{ display: "flex", border: "1.5px solid #e5e7eb", borderRadius: 8, overflow: "hidden" }}>
                   {[["grid", I.grid], ["list", I.list]].map(([v, d]) => (
@@ -228,7 +387,9 @@ export default function BrowsePage({ user, setPage }) {
 
             {results.length === 0 ? (
               <div style={{ textAlign: "center", padding: "60px 0", color: "#9ca3af" }}>
-                <div style={{ fontSize: "2.8rem", marginBottom: 10 }}>🔍</div>
+                <div style={{ display: "flex", justifyContent: "center", marginBottom: 10 }}>
+                  <Ic d={I.search} s={40} stroke="#d1d5db" />
+                </div>
                 <p style={{ fontWeight: 600, color: "#374151", marginBottom: 4 }}>
                   No {listingType === 'sale' ? "properties" : "apartments"} found
                 </p>
@@ -250,24 +411,40 @@ export default function BrowsePage({ user, setPage }) {
                       <div>
                         <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 6 }}>
                           <div>
-                            {l.verified && <div style={{ marginBottom: 5 }}><Badge color="#fff" bg="#0d1b5e"><Ic d={I.shield} s={9} fill="#fff" stroke="none" /> Verified</Badge></div>}
+                            {l.verified && (
+                              <div style={{ marginBottom: 5 }}>
+                                <Badge color="#fff" bg="#0d1b5e">
+                                  <Ic d={I.shield} s={9} fill="#fff" stroke="none" /> Verified
+                                </Badge>
+                              </div>
+                            )}
                             <h3 style={{ fontFamily: "'DM Serif Display',serif", fontSize: "1.05rem", color: "#0d1b5e", marginBottom: 4 }}>{l.title}</h3>
-                            <div style={{ display: "flex", gap: 4, color: "#6b7280", fontSize: "0.76rem", alignItems: "center" }}><Ic d={I.pin} s={12} />{l.area}, {l.state}</div>
+                            <div style={{ display: "flex", gap: 4, color: "#6b7280", fontSize: "0.76rem", alignItems: "center" }}>
+                              <Ic d={I.pin} s={12} />{l.area}, {l.state}
+                            </div>
                           </div>
                           <div style={{ textAlign: "right" }}>
-                            <div style={{ fontWeight: 700, color: "#0d1b5e", fontSize: "1.05rem" }}>₦{l.price.toLocaleString()}</div>
+                            <div style={{ fontWeight: 700, color: "#0d1b5e", fontSize: "1.05rem" }}>₦{l.price?.toLocaleString()}</div>
                             <div style={{ fontSize: "0.7rem", color: "#9ca3af" }}>
                               {l.listing_type === 'sale' ? 'one-time price' : 'per year'}
                             </div>
                           </div>
                         </div>
-                        <div style={{ display: "flex", gap: 14, marginTop: 10 }}>
-                          <span style={{ display: "flex", alignItems: "center", gap: 3, color: "#6b7280", fontSize: "0.77rem" }}><Ic d={I.bath} s={12} />{l.kitchs || 0} Kitchen</span>
-                          <span style={{ display: "flex", alignItems: "center", gap: 3, color: "#6b7280", fontSize: "0.77rem" }}><Ic d={I.bath} s={12} />{l.baths || 0} Bath</span>
-                        </div>
+                        {l.type !== 'Land' && (
+                          <div style={{ display: "flex", gap: 14, marginTop: 10 }}>
+                            <span style={{ display: "flex", alignItems: "center", gap: 3, color: "#6b7280", fontSize: "0.77rem" }}>
+                              <Ic d={I.bath} s={12} />{l.kitchs || 0} Kitchen
+                            </span>
+                            <span style={{ display: "flex", alignItems: "center", gap: 3, color: "#6b7280", fontSize: "0.77rem" }}>
+                              <Ic d={I.bath} s={12} />{l.baths || 0} Bath
+                            </span>
+                          </div>
+                        )}
                       </div>
                       <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
-                        <Badge color="#1e3db5" bg="#eef2ff">Unlock Contact — ₦200</Badge>
+                        <Badge color="#1e3db5" bg="#eef2ff">
+                          {l.listing_type === 'sale' ? "View Property" : "View Apartment"}
+                        </Badge>
                       </div>
                     </div>
                   </div>
@@ -279,13 +456,21 @@ export default function BrowsePage({ user, setPage }) {
       </div>
 
       {selected && (
-        <ListingModal listing={selected} onClose={() => setSelected(null)}
+        <ListingModal
+          listing={selected}
+          onClose={() => setSelected(null)}
           onUnlock={() => { setUnlocking(selected); setSelected(null) }}
-          user={user} setPage={setPage} />
+          user={user}
+          setPage={setPage}
+        />
       )}
       {unlocking && (
-        <UnlockModal listing={unlocking} onClose={() => setUnlocking(null)}
-          user={user} setPage={setPage} />
+        <UnlockModal
+          listing={unlocking}
+          onClose={() => setUnlocking(null)}
+          user={user}
+          setPage={setPage}
+        />
       )}
     </div>
   )

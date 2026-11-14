@@ -37,7 +37,13 @@ export default function BottomNav({ page, setPage, user }) {
         return (
           <button
             key={tab.id}
-            onClick={() => setPage(tab.id)}
+            onClick={() => {
+              if (tab.id === 'browse' && !user) {
+                setPage('register')
+              } else {
+                setPage(tab.id)
+              }
+            }}
             style={{
               background: "none",
               border: "none",
