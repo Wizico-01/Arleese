@@ -1,20 +1,16 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { Btn, Badge } from '../components/UI'
-import { Ic, I } from '../components/Icons'
 import ListingCard from '../components/ListingCard'
 import ListingModal from '../components/modals/ListingModal'
-import UnlockModal from '../components/modals/UnlockModal'
 import Footer from '../components/Footer'
 import {
-  Search, ShieldCheck, Phone, ArrowRight,
-  Building2, Star, Users, BadgePercent
+  Search, UserCheck, Truck, ArrowRight, ShieldCheck,
+  MapPin, BadgePercent, KeyRound, Clock,
 } from 'lucide-react'
 
 export default function HomePage({ setPage, user }) {
   const [listings, setListings] = useState([])
   const [selected, setSelected] = useState(null)
-  const [unlocking, setUnlocking] = useState(null)
 
   useEffect(() => {
     const fetchLatest = async () => {
@@ -30,121 +26,82 @@ export default function HomePage({ setPage, user }) {
     fetchLatest()
   }, [])
 
+  const dashboardTarget =
+  user?.role === 'landlord' ? 'dashboard' :
+  user?.role === 'logistics' ? 'logistics' :
+  'saved'
+
+  const primaryBtn = {
+    background: "#fff", color: "#0d1b5e", border: "none",
+    borderRadius: 10, padding: "14px 28px", fontSize: "0.95rem",
+    fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+    display: "flex", alignItems: "center",
+    justifyContent: "center", gap: 8,
+  }
+
+  const secondaryBtn = {
+    background: "transparent", color: "#fff",
+    border: "1.5px solid rgba(255,255,255,.32)",
+    borderRadius: 10, padding: "13px 26px", fontSize: "0.92rem",
+    fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
+    display: "flex", alignItems: "center",
+    justifyContent: "center", gap: 8,
+  }
+
   return (
     <div style={{ background: "#f4f3ef", minHeight: "100vh" }}>
 
       {/* HERO */}
       <section style={{
         background: "linear-gradient(160deg,#060e33 0%,#0d1b5e 60%,#1a3bdb 100%)",
-        padding: "80px 20px 70px",
+        padding: "72px 20px 64px",
         textAlign: "center",
         width: "100%",
         overflow: "hidden",
       }}>
         <div style={{ maxWidth: 680, margin: "0 auto" }}>
-          <div style={{
-            display: "inline-flex", alignItems: "center", gap: 8,
-            background: "rgba(255,255,255,.08)",
-            border: "1px solid rgba(255,255,255,.15)",
-            borderRadius: 30, padding: "6px 16px",
-            fontSize: "0.75rem", color: "rgba(255,255,255,.8)",
-            fontWeight: 600, letterSpacing: "0.06em",
-            marginBottom: 24, textTransform: "uppercase",
-          }}>
-            Zero Agent Fees Across Nigeria
-          </div>
-
           <h1 style={{
             fontFamily: "'DM Serif Display',serif",
-            fontSize: "clamp(2rem, 6vw, 3.2rem)",
+            fontSize: "clamp(2.2rem, 6.5vw, 3.4rem)",
             color: "#fff",
-            lineHeight: 1.18,
+            lineHeight: 1.15,
             marginBottom: 20,
+            fontWeight: 400,
           }}>
-            Rent a Home Directly
+            Find Your Next Home.
             <br />
-            <span style={{ color: "#7eb3ff", fontStyle: "italic" }}>
-              from the Landlord
-            </span>
+            <em style={{ color: "#7eb3ff" }}>Move in with 30% off.</em>
           </h1>
 
           <p style={{
             color: "rgba(255,255,255,.72)",
-            fontSize: "clamp(0.9rem, 2.5vw, 1.05rem)",
+            fontSize: "clamp(0.92rem, 2.5vw, 1.05rem)",
             lineHeight: 1.75,
-            marginBottom: 36,
-            maxWidth: 520,
-            margin: "0 auto 36px",
+            maxWidth: 540,
+            margin: "0 auto 34px",
           }}>
-            No agents. No 20% commission. No inspection fees.
-            Browse verified landlord listings across all 36 states
-            and unlock direct contact for just ₦200.
+            Browse available apartments, connect with a verified Arleece
+            Home Guide, and enjoy 30% off your move-in logistics.
           </p>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 340, margin: "0 auto" }}>
+          <div style={{
+            display: "flex", flexDirection: "column",
+            gap: 12, maxWidth: 340, margin: "0 auto",
+          }}>
             <button
-              onClick={() => {
-                if (!user) {
-                  setPage('register')
-                } else {
-                  setPage('browse')
-                }
-              }}
-              style={{
-                background: "#fff",
-                color: "#0d1b5e",
-                border: "none",
-                borderRadius: 10,
-                padding: "14px 28px",
-                fontSize: "0.95rem",
-                fontWeight: 700,
-                cursor: "pointer",
-                fontFamily: "inherit",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-              }}
+              onClick={() => setPage(user ? 'browse' : 'register')}
+              style={primaryBtn}
             >
-              {user ? "Browse Apartments" : "Sign Up to View Apartments"}
-              <ArrowRight size={16} strokeWidth={2.5} />
+              Browse Apartments <ArrowRight size={16} strokeWidth={2.5} />
             </button>
 
-            {!user && (
-              <button
-                onClick={() => setPage('register-landlord')}
-                style={{
-                  background: "transparent",
-                  color: "#fff",
-                  border: "1.5px solid rgba(255,255,255,.32)",
-                  borderRadius: 10,
-                  padding: "13px 26px",
-                  fontSize: "0.9rem",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                }}
-              >
-                List Your Property Free
+            {user ? (
+              <button onClick={() => setPage(dashboardTarget)} style={secondaryBtn}>
+                Go to Dashboard <ArrowRight size={16} strokeWidth={2.5} />
               </button>
-            )}
-
-            {user?.role === 'landlord' && (
-              <button
-                onClick={() => setPage('dashboard')}
-                style={{
-                  background: "transparent",
-                  color: "#fff",
-                  border: "1.5px solid rgba(255,255,255,.32)",
-                  borderRadius: 10,
-                  padding: "13px 26px",
-                  fontSize: "0.9rem",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                }}
-              >
-                Go to Dashboard
+            ) : (
+              <button onClick={() => setPage('login')} style={secondaryBtn}>
+                Sign In
               </button>
             )}
           </div>
@@ -153,16 +110,15 @@ export default function HomePage({ setPage, user }) {
           <div style={{
             display: "grid",
             gridTemplateColumns: "1fr 1fr",
-            gap: 16,
-            marginTop: 52,
-            maxWidth: 480,
-            margin: "52px auto 0",
+            gap: 22,
+            maxWidth: 440,
+            margin: "48px auto 0",
           }}>
             {[
-              { icon: <Building2 size={20} color="#7eb3ff" strokeWidth={1.6} />, val: "₦200", label: "Flat Unlock Fee" },
-              { icon: <Users size={20} color="#7eb3ff" strokeWidth={1.6} />, val: "36", label: "States Covered" },
-              { icon: <BadgePercent size={20} color="#7eb3ff" strokeWidth={1.6} />, val: "0%", label: "Agent Commission" },
-              { icon: <ShieldCheck size={20} color="#7eb3ff" strokeWidth={1.6} />, val: "100%", label: "Direct to Landlord" },
+              { icon: <UserCheck size={20} color="#7eb3ff" strokeWidth={1.6} />, val: "Verified", label: "Home Guides" },
+              { icon: <MapPin size={20} color="#7eb3ff" strokeWidth={1.6} />, val: "36", label: "States Covered" },
+              { icon: <KeyRound size={20} color="#7eb3ff" strokeWidth={1.6} />, val: "₦200", label: "Unlock a Guide's Contact" },
+              { icon: <BadgePercent size={20} color="#7eb3ff" strokeWidth={1.6} />, val: "30%", label: "Off Moving Logistics" },
             ].map(s => (
               <div key={s.label} style={{ textAlign: "center" }}>
                 <div style={{ display: "flex", justifyContent: "center", marginBottom: 4 }}>
@@ -170,14 +126,11 @@ export default function HomePage({ setPage, user }) {
                 </div>
                 <div style={{
                   fontFamily: "'DM Serif Display',serif",
-                  fontSize: "1.8rem",
-                  color: "#7eb3ff",
-                  fontWeight: 700,
-                  lineHeight: 1,
+                  fontSize: "1.7rem", color: "#7eb3ff", lineHeight: 1.1,
                 }}>
                   {s.val}
                 </div>
-                <div style={{ fontSize: "0.75rem", color: "rgba(255,255,255,.55)", marginTop: 3 }}>
+                <div style={{ fontSize: "0.74rem", color: "rgba(255,255,255,.55)", marginTop: 4 }}>
                   {s.label}
                 </div>
               </div>
@@ -186,140 +139,71 @@ export default function HomePage({ setPage, user }) {
         </div>
       </section>
 
-      {/* SIGNUP NUDGE — only for non-logged-in users */}
-      {!user && (
-        <div style={{
-          background: "#0d1b5e",
-          padding: "32px 20px",
-          textAlign: "center",
-        }}>
-          <p style={{
-            color: "rgba(255,255,255,.8)",
-            fontSize: "0.9rem",
-            marginBottom: 16,
-            lineHeight: 1.7,
-          }}>
-            Hundreds of verified apartments and properties are waiting —
-            completely free to browse once you sign up.
-          </p>
-          <button
-            onClick={() => setPage('register')}
-            style={{
-              background: "#fff",
-              color: "#0d1b5e",
-              border: "none",
-              borderRadius: 10,
-              padding: "13px 28px",
-              fontWeight: 700,
-              fontSize: "0.92rem",
-              cursor: "pointer",
-              fontFamily: "inherit",
-            }}
-          >
-            Create Free Account
-          </button>
-          <p style={{
-            color: "rgba(255,255,255,.5)",
-            fontSize: "0.75rem",
-            marginTop: 10,
-          }}>
-            Already have an account?{" "}
-            <span
-              onClick={() => setPage('login')}
-              style={{
-                color: "#fff",
-                textDecoration: "underline",
-                cursor: "pointer",
-                fontWeight: 600,
-              }}
-            >
-              Sign In
-            </span>
-          </p>
-        </div>
-      )}
-
       {/* HOW IT WORKS */}
       <section style={{ padding: "64px 20px", background: "#f4f3ef" }}>
-        <div style={{ maxWidth: 860, margin: "0 auto" }}>
+        <div style={{ maxWidth: 900, margin: "0 auto" }}>
           <h2 style={{
             fontFamily: "'DM Serif Display',serif",
-            fontSize: "2rem",
-            color: "#0d1b5e",
-            textAlign: "center",
-            marginBottom: 10,
+            fontSize: "2rem", color: "#0d1b5e",
+            textAlign: "center", marginBottom: 10,
           }}>
             How Arleece Works
           </h2>
           <p style={{
-            textAlign: "center",
-            color: "#6b7280",
-            fontSize: "0.9rem",
-            marginBottom: 44,
+            textAlign: "center", color: "#6b7280",
+            fontSize: "0.9rem", marginBottom: 40,
           }}>
-            Three steps to your next home. No agent required.
+            Three steps from browsing to moving in.
           </p>
 
           <div style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
-            gap: 20,
+            gridTemplateColumns: "repeat(auto-fit,minmax(230px,1fr))",
+            gap: 18,
           }}>
             {[
               {
-                icon: <Search size={28} strokeWidth={1.6} color="#0d1b5e" />,
                 step: "01",
-                title: "Browse Listings",
-                desc: "Search verified apartments and properties across all 36 states in Nigeria for free.",
+                icon: <Search size={28} strokeWidth={1.6} color="#0d1b5e" />,
+                title: "Browse apartments",
+                desc: "Search available apartments across all 36 states by location, type and price.",
               },
               {
-                icon: <Phone size={28} strokeWidth={1.6} color="#0d1b5e" />,
                 step: "02",
-                title: "Unlock Contact",
-                desc: "Pay a one-time ₦200 fee to get the landlord's direct phone number and property address.",
+                icon: <KeyRound size={28} strokeWidth={1.6} color="#0d1b5e" />,
+                title: "Unlock your Home Guide's contact",
+                desc: "Pay ₦200 to get your Home Guide's phone number and your personal move-in code.",
               },
               {
-                icon: <ShieldCheck size={28} strokeWidth={1.6} color="#0d1b5e" />,
                 step: "03",
-                title: "Move In Your Way",
-                desc: "Call the landlord directly. Negotiate your terms. Move in without any agent in between.",
+                icon: <Truck size={28} strokeWidth={1.6} color="#0d1b5e" />,
+                title: "Book your move with 30% off",
+                desc: "Use your code after your viewing to claim 30% off your moving logistics.",
               },
             ].map(s => (
               <div key={s.step} style={{
-                background: "#fff",
-                borderRadius: 16,
-                padding: "28px 22px",
-                border: "1px solid #e8e8e0",
+                background: "#fff", borderRadius: 16,
+                padding: "26px 22px", border: "1px solid #e8e8e0",
               }}>
                 <div style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "flex-start",
-                  marginBottom: 16,
+                  display: "flex", justifyContent: "space-between",
+                  alignItems: "flex-start", marginBottom: 16,
                 }}>
                   {s.icon}
                   <span style={{
-                    fontSize: "0.72rem",
-                    fontWeight: 800,
-                    color: "#e5e7eb",
-                    letterSpacing: "0.08em",
+                    fontSize: "0.72rem", fontWeight: 800,
+                    color: "#d1d5db", letterSpacing: "0.08em",
                   }}>
                     {s.step}
                   </span>
                 </div>
                 <h3 style={{
-                  fontWeight: 700,
-                  color: "#0d1b5e",
-                  fontSize: "1rem",
-                  marginBottom: 8,
+                  fontWeight: 700, color: "#0d1b5e",
+                  fontSize: "1rem", marginBottom: 8,
                 }}>
                   {s.title}
                 </h3>
-                <p style={{
-                  color: "#6b7280",
-                  fontSize: "0.83rem",
-                  lineHeight: 1.7,
-                }}>
+                <p style={{ color: "#6b7280", fontSize: "0.83rem", lineHeight: 1.7 }}>
                   {s.desc}
                 </p>
               </div>
@@ -333,73 +217,28 @@ export default function HomePage({ setPage, user }) {
         <section style={{ padding: "0 20px 64px", background: "#f4f3ef" }}>
           <div style={{ maxWidth: 1080, margin: "0 auto" }}>
             <div style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: 26,
+              display: "flex", justifyContent: "space-between",
+              alignItems: "center", marginBottom: 24,
             }}>
               <h2 style={{
                 fontFamily: "'DM Serif Display',serif",
-                fontSize: "1.75rem",
-                color: "#0d1b5e",
+                fontSize: "1.7rem", color: "#0d1b5e",
               }}>
-                Latest Listings
+                Latest Apartments
               </h2>
               <button
-                onClick={() => user ? setPage('browse') : setPage('register')}
+                onClick={() => setPage(user ? 'browse' : 'register')}
                 style={{
-                  background: "#fff",
-                  color: "#0d1b5e",
-                  border: "1.5px solid #0d1b5e",
-                  borderRadius: 9,
-                  padding: "9px 18px",
-                  fontWeight: 600,
-                  fontSize: "0.82rem",
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
+                  background: "#fff", color: "#0d1b5e",
+                  border: "1.5px solid #0d1b5e", borderRadius: 9,
+                  padding: "9px 18px", fontWeight: 600, fontSize: "0.82rem",
+                  cursor: "pointer", fontFamily: "inherit",
+                  display: "flex", alignItems: "center", gap: 6,
                 }}
               >
                 View All <ArrowRight size={14} strokeWidth={2.5} />
               </button>
             </div>
-
-            {!user && (
-              <div style={{
-                background: "#eef2ff",
-                border: "1px solid #c7d4fd",
-                borderRadius: 12,
-                padding: "14px 18px",
-                marginBottom: 20,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                flexWrap: "wrap",
-                gap: 12,
-              }}>
-                <p style={{ color: "#1e3db5", fontSize: "0.85rem", fontWeight: 600 }}>
-                  Sign up to view all available listings across Nigeria
-                </p>
-                <button
-                  onClick={() => setPage('register')}
-                  style={{
-                    background: "#0d1b5e",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: 8,
-                    padding: "9px 18px",
-                    fontSize: "0.82rem",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    fontFamily: "inherit",
-                  }}
-                >
-                  Sign Up Free
-                </button>
-              </div>
-            )}
 
             <div style={{
               display: "grid",
@@ -410,61 +249,117 @@ export default function HomePage({ setPage, user }) {
               userSelect: !user ? "none" : "auto",
             }}>
               {listings.map(l => (
-                <ListingCard
-                  key={l.id}
-                  listing={l}
-                  onClick={() => user ? setSelected(l) : setPage('register')}
-                />
+                <ListingCard key={l.id} listing={l} onClick={() => setSelected(l)} />
               ))}
             </div>
           </div>
         </section>
       )}
 
-      {/* LANDLORD CTA — only for non-landlords */}
-      {user?.role !== 'landlord' && (
-        <section style={{
-          background: "linear-gradient(135deg,#0d1b5e,#1e3db5)",
-          padding: "56px 20px",
-          textAlign: "center",
-        }}>
-          <div style={{ maxWidth: 560, margin: "0 auto" }}>
-            <h2 style={{
-              fontFamily: "'DM Serif Display',serif",
-              color: "#fff",
-              fontSize: "1.9rem",
-              marginBottom: 12,
-            }}>
-              Are You a Landlord?
-            </h2>
-            <p style={{
-              color: "rgba(255,255,255,.72)",
-              fontSize: "0.9rem",
-              lineHeight: 1.75,
-              marginBottom: 28,
-            }}>
-              List your apartment or property for free. Verified tenants
-              will contact you directly — no agent taking commission from either side.
-            </p>
-            <button
-              onClick={() => setPage('register-landlord')}
-              style={{
-                background: "#fff",
-                color: "#0d1b5e",
-                border: "none",
-                borderRadius: 10,
-                padding: "14px 28px",
-                fontWeight: 700,
-                fontSize: "0.95rem",
-                cursor: "pointer",
-                fontFamily: "inherit",
-              }}
-            >
-              List Your Apartment for Free
-            </button>
+      {/* BENEFITS */}
+      <section style={{ padding: "0 20px 64px", background: "#f4f3ef" }}>
+        <div style={{ maxWidth: 900, margin: "0 auto" }}>
+          <h2 style={{
+            fontFamily: "'DM Serif Display',serif",
+            fontSize: "1.8rem", color: "#0d1b5e",
+            textAlign: "center", marginBottom: 32,
+          }}>
+            Why Tenants Choose Arleece
+          </h2>
+
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit,minmax(250px,1fr))",
+            gap: 16,
+          }}>
+            {[
+              {
+                icon: <ShieldCheck size={22} strokeWidth={1.7} color="#0d1b5e" />,
+                title: "Verified Home Guides",
+                desc: "Every Home Guide on Arleece is checked before they can list.",
+              },
+              {
+                icon: <KeyRound size={22} strokeWidth={1.7} color="#0d1b5e" />,
+                title: "Your personal move-in code",
+                desc: "Each unlock gives you a unique code tied to your account and that apartment.",
+              },
+              {
+                icon: <BadgePercent size={22} strokeWidth={1.7} color="#0d1b5e" />,
+                title: "30% off your move",
+                desc: "Redeem your code for 30% off moving logistics after your viewing.",
+              },
+              {
+                icon: <Clock size={22} strokeWidth={1.7} color="#0d1b5e" />,
+                title: "Connected or Free",
+                desc: "If your Home Guide does not respond in time, your ₦200 comes back as app credit.",
+              },
+            ].map(b => (
+              <div key={b.title} style={{
+                background: "#fff", border: "1px solid #e8e8e0",
+                borderRadius: 14, padding: "20px 18px",
+                display: "flex", gap: 14, alignItems: "flex-start",
+              }}>
+                <div style={{
+                  width: 42, height: 42, borderRadius: 10,
+                  background: "#eef2ff", display: "flex",
+                  alignItems: "center", justifyContent: "center", flexShrink: 0,
+                }}>
+                  {b.icon}
+                </div>
+                <div>
+                  <h3 style={{
+                    fontWeight: 700, color: "#0d1b5e",
+                    fontSize: "0.92rem", marginBottom: 4,
+                  }}>
+                    {b.title}
+                  </h3>
+                  <p style={{ color: "#6b7280", fontSize: "0.8rem", lineHeight: 1.65 }}>
+                    {b.desc}
+                  </p>
+                </div>
+              </div>
+            ))}
           </div>
-        </section>
-      )}
+        </div>
+      </section>
+
+      {/* FINAL CTA */}
+      <section style={{
+        background: "linear-gradient(135deg,#0d1b5e,#1e3db5)",
+        padding: "56px 20px", textAlign: "center",
+      }}>
+        <div style={{ maxWidth: 520, margin: "0 auto" }}>
+          <h2 style={{
+            fontFamily: "'DM Serif Display',serif",
+            color: "#fff", fontSize: "1.9rem", marginBottom: 12,
+          }}>
+            Ready to move? Start browsing.
+          </h2>
+          <p style={{
+            color: "rgba(255,255,255,.72)", fontSize: "0.9rem",
+            lineHeight: 1.75, marginBottom: 26,
+          }}>
+            Create your free account, find an apartment you like and
+            connect with a verified Home Guide today.
+          </p>
+          <div style={{
+            display: "flex", flexDirection: "column",
+            gap: 10, maxWidth: 300, margin: "0 auto",
+          }}>
+            <button
+              onClick={() => setPage(user ? 'browse' : 'register')}
+              style={primaryBtn}
+            >
+              Browse Apartments <ArrowRight size={16} strokeWidth={2.5} />
+            </button>
+            {!user && (
+              <button onClick={() => setPage('register-landlord')} style={secondaryBtn}>
+                Join as a Home Guide
+              </button>
+            )}
+          </div>
+        </div>
+      </section>
 
       <Footer setPage={setPage} />
 
@@ -472,15 +367,6 @@ export default function HomePage({ setPage, user }) {
         <ListingModal
           listing={selected}
           onClose={() => setSelected(null)}
-          onUnlock={() => { setUnlocking(selected); setSelected(null) }}
-          user={user}
-          setPage={setPage}
-        />
-      )}
-      {unlocking && (
-        <UnlockModal
-          listing={unlocking}
-          onClose={() => setUnlocking(null)}
           user={user}
           setPage={setPage}
         />

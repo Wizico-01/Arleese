@@ -11,6 +11,7 @@ import RegisterPage from './pages/RegisterPage'
 import DashboardPage from './pages/DashboardPage'
 import ProfilePage from './pages/ProfilePage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
+import LogisticsPage from './pages/LogisticsPage'
 import OnboardingSlider from './components/OnboardingSlider'
 
 export default function App() {
@@ -18,15 +19,35 @@ export default function App() {
     const hash = window.location.hash.replace('#', '').split('?')[0].split('&')[0]
     const validPages = [
       'home', 'browse', 'login', 'register', 'register-landlord',
-      'dashboard', 'profile', 'terms', 'saved', 'reset-password'
+      'dashboard', 'profile', 'terms', 'saved', 'unlocked-contacts',
+      'logistics', 'reset-password'
     ]
     return validPages.includes(hash) ? hash : 'home'
   })
   const [user, setUser] = useState(null)
   const [pageHistory, setPageHistory] = useState(['home'])
-  
+
   // Show onboarding slider every time a user opens or refreshes the page
   const [showOnboarding, setShowOnboarding] = useState(true)
+
+  const loadProfile = (session) => {
+    supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', session.user.id)
+      .single()
+      .then(({ data: profile }) => {
+        if (profile) {
+          setUser({
+            id: session.user.id,
+            email: session.user.email,
+            name: profile.full_name,
+            role: profile.role,
+            verified: profile.nin_verified,
+          })
+        }
+      })
+  }
 
   // Auth session check
   useEffect(() => {
@@ -49,26 +70,7 @@ export default function App() {
       if (session) {
         // Authenticated users bypass onboarding
         setShowOnboarding(false)
-        
-        supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single()
-          .then(({ data: profile }) => {
-            if (profile) {
-              setUser({
-                id: session.user.id,
-                email: session.user.email,
-                name: profile.full_name,
-                role: profile.role,
-                verified: profile.nin_verified,
-                bank_name: profile.bank_name,
-                account_number: profile.account_number,
-                account_name: profile.account_name,
-              })
-            }
-          })
+        loadProfile(session)
       }
     })
 
@@ -82,25 +84,7 @@ export default function App() {
       if (event === 'SIGNED_IN' && session) {
         setShowOnboarding(false)
         if (window.location.hash.includes('type=recovery')) return
-        supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single()
-          .then(({ data: profile }) => {
-            if (profile) {
-              setUser({
-                id: session.user.id,
-                email: session.user.email,
-                name: profile.full_name,
-                role: profile.role,
-                verified: profile.nin_verified,
-                bank_name: profile.bank_name,
-                account_number: profile.account_number,
-                account_name: profile.account_name,
-              })
-            }
-          })
+        loadProfile(session)
       }
       if (event === 'SIGNED_OUT') {
         setUser(null)
@@ -159,11 +143,14 @@ export default function App() {
       case 'dashboard':
         return <DashboardPage user={user} setPage={navigateTo} />
       case 'saved':
+      case 'unlocked-contacts':
         return <TenantDashboard user={user} setPage={navigateTo} />
       case 'terms':
         return <TermsPage setPage={navigateTo} />
       case 'profile':
         return <ProfilePage user={user} setPage={navigateTo} logout={logout} />
+      case 'logistics':
+        return <LogisticsPage user={user} setPage={navigateTo} />
       case 'reset-password':
         return <ResetPasswordPage setPage={navigateTo} />
       default:
@@ -212,4 +199,4 @@ export default function App() {
       )}
     </div>
   )
-  }
+}
