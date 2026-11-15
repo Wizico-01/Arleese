@@ -12,23 +12,38 @@ import DashboardPage from './pages/DashboardPage'
 import ProfilePage from './pages/ProfilePage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import LogisticsPage from './pages/LogisticsPage'
+import EmailConfirmedPage from './pages/EmailConfirmedPage'
 import OnboardingSlider from './components/OnboardingSlider'
+
+// Read the link type BEFORE Supabase clears the URL hash
+const LANDING_HASH = window.location.hash
+const IS_RECOVERY = LANDING_HASH.includes('type=recovery')
+const IS_EMAIL_CONFIRM =
+  !IS_RECOVERY &&
+  (LANDING_HASH.includes('type=signup') || LANDING_HASH.includes('type=email'))
+const IS_LINK_ERROR =
+  !IS_RECOVERY && !IS_EMAIL_CONFIRM && LANDING_HASH.includes('error_code=')
+const LINK_STATUS = IS_LINK_ERROR ? 'expired' : 'success'
 
 export default function App() {
   const [page, setPage] = useState(() => {
+    if (IS_RECOVERY) return 'reset-password'
+    if (IS_EMAIL_CONFIRM || IS_LINK_ERROR) return 'email-confirmed'
     const hash = window.location.hash.replace('#', '').split('?')[0].split('&')[0]
     const validPages = [
       'home', 'browse', 'login', 'register', 'register-landlord',
       'dashboard', 'profile', 'terms', 'saved', 'unlocked-contacts',
-      'logistics', 'reset-password'
+      'logistics', 'reset-password',
     ]
     return validPages.includes(hash) ? hash : 'home'
   })
   const [user, setUser] = useState(null)
   const [pageHistory, setPageHistory] = useState(['home'])
 
-  // Show onboarding slider every time a user opens or refreshes the page
-  const [showOnboarding, setShowOnboarding] = useState(true)
+  // Onboarding shows on every open, except when arriving from an email link
+  const [showOnboarding, setShowOnboarding] = useState(
+    !(IS_RECOVERY || IS_EMAIL_CONFIRM || IS_LINK_ERROR)
+  )
 
   const loadProfile = (session) => {
     supabase
@@ -45,36 +60,23 @@ export default function App() {
             role: profile.role,
             verified: profile.nin_verified,
           })
+          // Logistics accounts go straight to the Verify ID page
+          if (profile.role === 'logistics') {
+            setPage(p => (['home', 'browse', 'login'].includes(p) ? 'logistics' : p))
+          }
         }
       })
   }
 
   // Auth session check
   useEffect(() => {
-    // Check for password recovery token in URL FIRST
-    const fullUrl = window.location.href
-    const hashString = window.location.hash
-
-    if (
-      hashString.includes('type=recovery') ||
-      hashString.includes('access_token') ||
-      fullUrl.includes('type=recovery')
-    ) {
-      setPage('reset-password')
-      setShowOnboarding(false)
-      return
-    }
-
-    // Load session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        // Authenticated users bypass onboarding
         setShowOnboarding(false)
-        loadProfile(session)
+        if (!IS_RECOVERY) loadProfile(session)
       }
     })
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
         setPage('reset-password')
@@ -83,7 +85,7 @@ export default function App() {
       }
       if (event === 'SIGNED_IN' && session) {
         setShowOnboarding(false)
-        if (window.location.hash.includes('type=recovery')) return
+        if (IS_RECOVERY) return
         loadProfile(session)
       }
       if (event === 'SIGNED_OUT') {
@@ -151,6 +153,8 @@ export default function App() {
         return <ProfilePage user={user} setPage={navigateTo} logout={logout} />
       case 'logistics':
         return <LogisticsPage user={user} setPage={navigateTo} />
+      case 'email-confirmed':
+        return <EmailConfirmedPage user={user} status={LINK_STATUS} setPage={navigateTo} />
       case 'reset-password':
         return <ResetPasswordPage setPage={navigateTo} />
       default:
@@ -158,10 +162,9 @@ export default function App() {
     }
   }
 
-  const hideNav = ['login', 'register', 'register-landlord'].includes(page)
-  const hideBottom = ['login', 'register', 'register-landlord'].includes(page)
+  const hideNav = ['login', 'register', 'register-landlord', 'email-confirmed'].includes(page)
+  const hideBottom = ['login', 'register', 'register-landlord', 'email-confirmed'].includes(page)
 
-  // SHOW ONBOARDING SLIDER FIRST (IF USER IS NOT LOGGED IN)
   if (showOnboarding && !user) {
     return (
       <OnboardingSlider
