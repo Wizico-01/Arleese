@@ -2,25 +2,26 @@ import { Ic, I } from './Icons'
 
 export default function BottomNav({ page, setPage, user }) {
   const tabs =
-    user?.role === 'landlord'
-      ? [
-          { id: 'home', label: 'Home', icon: I.home },
-          { id: 'browse', label: 'Browse', icon: I.search },
-          { id: 'dashboard', label: 'Dashboard', icon: I.building },
-          { id: 'profile', label: 'Profile', icon: I.user },
-        ]
-      : user?.role === 'logistics'
-      ? [
-          { id: 'home', label: 'Home', icon: I.home },
-          { id: 'logistics', label: 'Verify ID', icon: I.shield },
-          { id: 'profile', label: 'Profile', icon: I.user },
-        ]
-      : [
-          { id: 'home', label: 'Home', icon: I.home },
-          { id: 'browse', label: 'Browse', icon: I.search },
-          { id: 'saved', label: 'Saved', icon: I.star },
-          { id: 'profile', label: 'Profile', icon: I.user },
-        ]
+  user?.role === 'landlord'
+    ? [
+        { id: 'home', label: 'Home', icon: I.home },
+        { id: 'browse', label: 'Browse', icon: I.search },
+        { id: 'saved', label: 'Unlocked', icon: I.star },
+        { id: 'dashboard', label: 'Dashboard', icon: I.building },
+        { id: 'profile', label: 'Profile', icon: I.user },
+      ]
+    : user?.role === 'logistics'
+    ? [
+        { id: 'home', label: 'Home', icon: I.home },
+        { id: 'logistics', label: 'Verify ID', icon: I.shield },
+        { id: 'profile', label: 'Profile', icon: I.user },
+      ]
+    : [
+        { id: 'home', label: 'Home', icon: I.home },
+        { id: 'browse', label: 'Browse', icon: I.search },
+        { id: 'saved', label: 'Unlocked', icon: I.star },
+        { id: 'profile', label: 'Profile', icon: I.user },
+      ]
 
   return (
     <div style={{

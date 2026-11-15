@@ -13,6 +13,8 @@ import ProfilePage from './pages/ProfilePage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import LogisticsPage from './pages/LogisticsPage'
 import EmailConfirmedPage from './pages/EmailConfirmedPage'
+import UnlockHelpPage from './pages/UnlockHelpPage'
+import AdminPage from './pages/AdminPage'
 import OnboardingSlider from './components/OnboardingSlider'
 
 // Read the link type BEFORE Supabase clears the URL hash
@@ -33,12 +35,13 @@ export default function App() {
     const validPages = [
       'home', 'browse', 'login', 'register', 'register-landlord',
       'dashboard', 'profile', 'terms', 'saved', 'unlocked-contacts',
-      'logistics', 'reset-password',
+      'logistics', 'unlock-help', 'admin', 'reset-password',
     ]
     return validPages.includes(hash) ? hash : 'home'
   })
   const [user, setUser] = useState(null)
   const [pageHistory, setPageHistory] = useState(['home'])
+  const [payNotice, setPayNotice] = useState("")
 
   // Onboarding shows on every open, except when arriving from an email link
   const [showOnboarding, setShowOnboarding] = useState(
@@ -59,8 +62,8 @@ export default function App() {
             name: profile.full_name,
             role: profile.role,
             verified: profile.nin_verified,
+            isAdmin: !!profile.is_admin,
           })
-          // Logistics accounts go straight to the Verify ID page
           if (profile.role === 'logistics') {
             setPage(p => (['home', 'browse', 'login'].includes(p) ? 'logistics' : p))
           }
@@ -68,7 +71,6 @@ export default function App() {
       })
   }
 
-  // Auth session check
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
@@ -95,6 +97,51 @@ export default function App() {
 
     return () => subscription.unsubscribe()
   }, [])
+
+  // Confirm any payment that was started but never finished on screen
+  useEffect(() => {
+    if (!user?.id) return
+    let cancelled = false
+
+    const checkPending = async () => {
+      const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString()
+      const { data: rows } = await supabase
+        .from('pending_payments')
+        .select('reference')
+        .eq('tenant_id', user.id)
+        .eq('status', 'pending')
+        .gte('created_at', since)
+        .limit(5)
+      if (!rows?.length) return
+
+      let confirmed = 0
+      for (const r of rows) {
+        try {
+          const { data } = await supabase.functions.invoke('verify-payment', {
+            body: { reference: r.reference },
+          })
+          if (data?.status === 'fulfilled') confirmed++
+        } catch { /* ignore */ }
+      }
+      if (!cancelled && confirmed > 0) {
+        setPayNotice(
+          confirmed === 1
+            ? "Your payment was confirmed. Your contact and Arleece ID are now in Unlocked."
+            : `${confirmed} payments were confirmed. Your contacts and Arleece IDs are now in Unlocked.`
+        )
+      }
+    }
+
+    checkPending()
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') checkPending()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      cancelled = true
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [user?.id])
 
   // Handle browser back button
   useEffect(() => {
@@ -126,6 +173,7 @@ export default function App() {
   const logout = async () => {
     await supabase.auth.signOut()
     setUser(null)
+    setPayNotice("")
     setPageHistory(['home'])
     setPage('home')
     window.location.hash = 'home'
@@ -153,6 +201,10 @@ export default function App() {
         return <ProfilePage user={user} setPage={navigateTo} logout={logout} />
       case 'logistics':
         return <LogisticsPage user={user} setPage={navigateTo} />
+      case 'unlock-help':
+        return <UnlockHelpPage user={user} setPage={navigateTo} />
+      case 'admin':
+        return <AdminPage user={user} setPage={navigateTo} />
       case 'email-confirmed':
         return <EmailConfirmedPage user={user} status={LINK_STATUS} setPage={navigateTo} />
       case 'reset-password':
@@ -193,6 +245,33 @@ export default function App() {
         />
       )}
       {renderPage()}
+
+      {payNotice && (
+        <div style={{
+          position: "fixed", left: 12, right: 12, bottom: 78, zIndex: 1100,
+          background: "#0d1b5e", color: "#fff", borderRadius: 12,
+          padding: "12px 14px", boxShadow: "0 8px 24px rgba(0,0,0,.25)",
+          display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
+          fontSize: "0.82rem", lineHeight: 1.5,
+        }}>
+          <span>{payNotice}</span>
+          <span style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+            <button
+              onClick={() => { setPayNotice(""); navigateTo('saved') }}
+              style={{ background: "#fff", color: "#0d1b5e", border: "none", borderRadius: 8, padding: "7px 12px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+            >
+              View
+            </button>
+            <button
+              onClick={() => setPayNotice("")}
+              style={{ background: "none", color: "#fff", border: "none", fontSize: "1rem", cursor: "pointer", fontFamily: "inherit" }}
+            >
+              ✕
+            </button>
+          </span>
+        </div>
+      )}
+
       {!hideBottom && (
         <BottomNav
           page={page}

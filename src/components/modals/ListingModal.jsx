@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
 import { Ic, I } from '../Icons'
 import { Btn, Badge } from '../UI'
 import {
   Phone, MapPin, Tag, Copy, Check, CheckCircle2,
-  Truck, AlertTriangle, Info,
+  Truck, AlertTriangle, Info, Clock, LifeBuoy,
 } from 'lucide-react'
 
 const PAYSTACK_KEY =
@@ -28,78 +28,118 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
   const [showFullImg, setShowFullImg] = useState(false)
   const [unlock, setUnlock] = useState(null)
   const [checking, setChecking] = useState(!!user?.id)
-  const [saving, setSaving] = useState(false)
-  const [pendingRef, setPendingRef] = useState(null)
+  const [starting, setStarting] = useState(false)
+  const [verifying, setVerifying] = useState(false)
+  const [pending, setPending] = useState(null) // reference of a payment we are still waiting for
   const [copied, setCopied] = useState(false)
   const [notice, setNotice] = useState(null) // { type: 'error' | 'info', message }
+  const busy = useRef(false)
+  const polls = useRef(0)
 
   const isSale = l.listing_type === 'sale'
   const isLand = l.type === 'Land'
-  const pendingKey = `arl_pending_${l.id}`
 
-  const readPending = () => {
-    try { return localStorage.getItem(pendingKey) } catch { return null }
-  }
-  const writePending = (ref) => {
-    try { localStorage.setItem(pendingKey, ref) } catch { /* ignore */ }
-  }
-  const clearPending = () => {
-    try { localStorage.removeItem(pendingKey) } catch { /* ignore */ }
+  const refreshUnlock = async () => {
+    if (!user?.id) return false
+    const { data } = await supabase
+      .from('unlocks')
+      .select('id, code, status, expires_at, paid_at, redeemed_at')
+      .eq('tenant_id', user.id)
+      .eq('listing_id', l.id)
+      .maybeSingle()
+    if (data) {
+      setUnlock(data)
+      setPending(null)
+      setNotice(null)
+      return true
+    }
+    return false
   }
 
-  // Has this tenant already unlocked this listing?
+  // Ask the server whether Paystack has received this payment
+  const verifyPayment = async (reference, silent = false) => {
+    if (!reference || busy.current) return false
+    busy.current = true
+    if (!silent) setVerifying(true)
+    let status = 'error'
+    try {
+      const { data, error } = await supabase.functions.invoke('verify-payment', {
+        body: { reference },
+      })
+      if (!error && data?.status) status = data.status
+    } catch { /* ignore */ }
+    busy.current = false
+    setVerifying(false)
+
+    if (status === 'fulfilled') {
+      await refreshUnlock()
+      return true
+    }
+    if (!silent) {
+      setNotice({
+        type: status === 'failed' || status === 'error' ? 'error' : 'info',
+        message:
+          status === 'failed'
+            ? 'Paystack reports this payment as failed.'
+            : status === 'error'
+            ? 'Could not check right now. Please try again in a moment.'
+            : 'We have not received your payment yet. Bank transfers can take a minute or two.',
+      })
+    }
+    return false
+  }
+
+  // On open: already unlocked? otherwise is a payment still waiting?
   useEffect(() => {
     let cancelled = false
-    const check = async () => {
-      if (!user?.id) return
-      const { data } = await supabase
-        .from('unlocks')
-        .select('id, code, status, expires_at, paid_at, redeemed_at')
-        .eq('tenant_id', user.id)
-        .eq('listing_id', l.id)
-        .maybeSingle()
+    const init = async () => {
+      if (!user?.id) { setChecking(false); return }
+      const found = await refreshUnlock()
       if (cancelled) return
-      if (data) {
-        setUnlock(data)
-        clearPending()
-      } else {
-        const saved = readPending()
-        if (saved) setPendingRef(saved)
+      if (!found) {
+        const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString()
+        const { data: p } = await supabase
+          .from('pending_payments')
+          .select('reference')
+          .eq('tenant_id', user.id)
+          .eq('listing_id', l.id)
+          .eq('status', 'pending')
+          .gte('created_at', since)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+        if (!cancelled && p) {
+          setPending(p.reference)
+          verifyPayment(p.reference, true)
+        }
       }
-      setChecking(false)
+      if (!cancelled) setChecking(false)
     }
-    check()
+    init()
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, l.id])
 
-  // Create the unlock + Arleece ID on the server
-  const createUnlock = async (reference) => {
-    setSaving(true)
-    setNotice(null)
-    const { data, error } = await supabase.rpc('create_unlock', {
-      p_listing_id: l.id,
-      p_payment_ref: reference,
-    })
-    setSaving(false)
-
-    if (error || !data) {
-      console.error('create_unlock failed:', error)
-      writePending(reference)
-      setPendingRef(reference)
-      setNotice({
-        type: 'error',
-        message: `Payment received (ref: ${reference}) but your ID was not generated yet. Tap "Finish unlock" to try again.`,
-      })
-      return
+  // While a payment is waiting: re-check every 6 seconds and whenever the app comes back
+  useEffect(() => {
+    if (!pending || unlock) return
+    polls.current = 0
+    const tick = () => {
+      if (polls.current++ < 40) verifyPayment(pending, true)
     }
+    const id = setInterval(tick, 6000)
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') verifyPayment(pending, true)
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      clearInterval(id)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pending, unlock])
 
-    clearPending()
-    setPendingRef(null)
-    setUnlock(data)
-  }
-
-  const handlePayment = () => {
+  const handlePayment = async () => {
     if (!user?.id || !user?.email) {
       setNotice({ type: 'error', message: "Please sign in to unlock this contact." })
       setTimeout(() => {
@@ -107,13 +147,32 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
       }, 1200)
       return
     }
-
     if (!window.PaystackPop) {
       setNotice({ type: 'error', message: "Payment system is loading. Please refresh the page." })
       return
     }
 
     setNotice(null)
+    setStarting(true)
+    const { data: reference, error } = await supabase.rpc('start_payment', {
+      p_listing_id: l.id,
+    })
+    setStarting(false)
+
+    if (error || !reference) {
+      setNotice({
+        type: 'error',
+        message: error?.message?.includes('Too many')
+          ? 'Too many payment attempts. Please wait a while and try again.'
+          : error?.message?.includes('Already unlocked')
+          ? 'You already unlocked this listing.'
+          : 'Could not start the payment. Please try again.',
+      })
+      if (error?.message?.includes('Already unlocked')) refreshUnlock()
+      return
+    }
+
+    setPending(reference)
 
     try {
       const handler = window.PaystackPop.setup({
@@ -121,13 +180,15 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
         email: user.email,
         amount: 20000, // ₦200 in kobo
         currency: 'NGN',
-        callback: function (response) {
-          createUnlock(response.reference)
+        ref: reference,
+        callback: function () {
+          verifyPayment(reference)
         },
         onClose: function () {
           setNotice({
             type: 'info',
-            message: 'Payment cancelled. Your Home Guide contact remains locked.',
+            message:
+              'If you paid, or are paying by transfer, tap "Check payment". Your contact unlocks automatically once the payment is confirmed.',
           })
         },
       })
@@ -155,7 +216,7 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
     `Valid until ${fmtDate(unlock?.expires_at)}`
 
   const renderAction = () => {
-    // 1. Already unlocked: show contact + ID
+    // 1. Unlocked: contact + ID
     if (unlock) {
       return (
         <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 13, padding: "18px 20px" }}>
@@ -184,7 +245,6 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
             </div>
           </div>
 
-          {/* ARLEECE ID */}
           <div style={{ background: "#0d1b5e", borderRadius: 12, padding: "16px 18px", marginTop: 16, color: "#fff" }}>
             <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.1em", color: "#9db7ff", marginBottom: 6 }}>
               YOUR ARLEECE ID
@@ -228,7 +288,48 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
       )
     }
 
-    // 2. Listing no longer available
+    // 2. Payment started, not confirmed yet
+    if (pending) {
+      return (
+        <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 13, padding: "18px 20px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 700, color: "#92400e", fontSize: "0.98rem", marginBottom: 6 }}>
+            <Clock size={18} strokeWidth={2} /> Waiting for your payment
+          </div>
+          <p style={{ color: "#92400e", fontSize: "0.82rem", lineHeight: 1.65, marginBottom: 14 }}>
+            Paid by transfer? It can take a minute or two. Your contact and Arleece ID unlock
+            automatically once Paystack confirms it, even if you close the app.
+          </p>
+          <Btn onClick={() => verifyPayment(pending)} disabled={verifying}>
+            {verifying ? "Checking…" : "Check payment"}
+          </Btn>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 14 }}>
+            <button
+              onClick={() => setPage('unlock-help')}
+              style={{
+                background: "none", border: "none", padding: 0, textAlign: "left",
+                color: "#1e3db5", fontSize: "0.8rem", fontWeight: 600,
+                cursor: "pointer", fontFamily: "inherit",
+                display: "flex", alignItems: "center", gap: 6,
+              }}
+            >
+              <LifeBuoy size={14} /> Paid but still nothing? Contact us
+            </button>
+            <button
+              onClick={() => setPending(null)}
+              style={{
+                background: "none", border: "none", padding: 0, textAlign: "left",
+                color: "#6b7280", fontSize: "0.78rem",
+                cursor: "pointer", fontFamily: "inherit",
+              }}
+            >
+              I have not paid. Start a new payment
+            </button>
+          </div>
+        </div>
+      )
+    }
+
+    // 3. Listing no longer available
     if (l.status === 'rented') {
       return (
         <div style={{ background: "#fee2e2", border: "1px solid #fca5a5", borderRadius: 13, padding: "18px 20px", textAlign: "center" }}>
@@ -238,23 +339,6 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
           <div style={{ color: "#b91c1c", fontSize: "0.82rem" }}>
             Browse other listings to find your next home.
           </div>
-        </div>
-      )
-    }
-
-    // 3. Paid, but the ID still needs to be generated
-    if (pendingRef) {
-      return (
-        <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 13, padding: "18px 20px" }}>
-          <div style={{ fontWeight: 700, color: "#92400e", fontSize: "0.96rem", marginBottom: 4 }}>
-            Payment received
-          </div>
-          <div style={{ color: "#92400e", fontSize: "0.82rem", lineHeight: 1.6, marginBottom: 14 }}>
-            Your payment (ref: {pendingRef}) went through, but your Arleece ID has not been generated yet.
-          </div>
-          <Btn onClick={() => createUnlock(pendingRef)} disabled={saving}>
-            {saving ? "Generating…" : "Finish unlock"}
-          </Btn>
         </div>
       )
     }
@@ -280,8 +364,8 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
               One-time ₦200. You also get your personal Arleece ID for 30% off your move.
             </div>
           </div>
-          <Btn onClick={handlePayment} disabled={saving}>
-            <Ic d={I.lock} s={14} /> Unlock for ₦200
+          <Btn onClick={handlePayment} disabled={starting}>
+            <Ic d={I.lock} s={14} /> {starting ? "Starting…" : "Unlock for ₦200"}
           </Btn>
         </div>
       </div>
@@ -307,7 +391,6 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
         onClick={e => e.stopPropagation()}
       >
 
-        {/* NOTICE BANNER */}
         {notice && (
           <div
             style={{
@@ -343,7 +426,6 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
           </div>
         )}
 
-        {/* FULL SCREEN IMAGE VIEWER */}
         {showFullImg && (
           <div
             onClick={() => setShowFullImg(false)}
@@ -371,7 +453,6 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
           </div>
         )}
 
-        {/* MAIN IMAGE */}
         <div style={{ position: "relative" }}>
           <img
             src={mainImg}
@@ -411,7 +492,6 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
           )}
         </div>
 
-        {/* THUMBNAIL STRIP */}
         {l.images?.length > 1 && (
           <div style={{ display: "flex", gap: 6, padding: "8px 12px", background: "#f4f3ef", overflowX: "auto" }}>
             {l.images.map((img, idx) => (
@@ -434,7 +514,6 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
           </div>
         )}
 
-        {/* VIDEOS */}
         {l.videos?.length > 0 && (
           <div style={{ padding: "10px 16px", background: "#f4f3ef" }}>
             <p style={{ fontSize: "0.78rem", fontWeight: 600, color: "#374151", marginBottom: 8 }}>
@@ -446,7 +525,6 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
           </div>
         )}
 
-        {/* CONTENT */}
         <div style={{ padding: "22px 26px 28px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 10, marginBottom: 14 }}>
             <div>
@@ -467,7 +545,6 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
             </div>
           </div>
 
-          {/* STATS PILLS */}
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", paddingBottom: 14, borderBottom: "1px solid #f0efea", marginBottom: 16 }}>
             {[
               !isLand ? `${l.kitchs || 0} Kitchen` : null,
@@ -480,7 +557,6 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
             ))}
           </div>
 
-          {/* AMENITIES */}
           {l.amenities?.length > 0 && (
             <div style={{ marginBottom: 18 }}>
               <h4 style={{ fontWeight: 700, color: "#374151", fontSize: "0.8rem", letterSpacing: "0.05em", marginBottom: 9 }}>

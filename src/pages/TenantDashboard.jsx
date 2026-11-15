@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import {
-  Phone, MapPin, Tag, User, Copy, Check, Lock, Home, Truck,
+  Phone, MapPin, Tag, User, Copy, Check, Lock, Home, Truck, LifeBuoy,
 } from 'lucide-react'
 
 const fmtDate = (d) =>
@@ -150,6 +150,26 @@ export default function TenantDashboard({ user, setPage }) {
           </div>
         )}
 
+<div style={{
+  background: "#fff", border: "1px solid #e8e8e0", borderRadius: 12,
+  padding: "12px 14px", marginBottom: 16,
+  display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
+}}>
+  <span style={{ display: "flex", alignItems: "center", gap: 8, color: "#4b5563", fontSize: "0.8rem", lineHeight: 1.5 }}>
+    <LifeBuoy size={16} color="#0d1b5e" style={{ flexShrink: 0 }} />
+    Paid but your contact is missing?
+  </span>
+  <button
+    onClick={() => setPage('unlock-help')}
+    style={{
+      background: "#0d1b5e", color: "#fff", border: "none", borderRadius: 8,
+      padding: "8px 14px", fontSize: "0.78rem", fontWeight: 600,
+      cursor: "pointer", fontFamily: "inherit", flexShrink: 0,
+    }}
+  >
+    Contact us
+  </button>
+</div>
         {!loading && unlocks.length === 0 && !err && (
           <div style={{
             background: "#fff", borderRadius: 16, padding: "40px 24px",
