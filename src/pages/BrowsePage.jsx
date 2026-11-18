@@ -60,10 +60,10 @@ export default function BrowsePage({ user, setPage }) {
             marginBottom: 12,
             lineHeight: 1.3,
           }}>
-            Find Your Home Directly
+            Find Your Next Home.
             <br />
             <span style={{ color: "#7eb3ff", fontStyle: "italic" }}>
-              from the Landlord
+              Move in with 30% off.
             </span>
           </h1>
           <p style={{
@@ -71,7 +71,7 @@ export default function BrowsePage({ user, setPage }) {
             fontSize: "0.95rem",
             lineHeight: 1.7,
           }}>
-            No agents. No inspection fees. No 20% commission.
+            Unlock Home Guide contacts for free.
           </p>
         </div>
 
@@ -111,9 +111,9 @@ export default function BrowsePage({ user, setPage }) {
             lineHeight: 1.75,
             marginBottom: 32,
           }}>
-            Join thousands of Nigerians already renting and buying
-            directly from landlords — zero agent fees, zero commission.
-            Create your free account to unlock all listings.
+            Create your free account to browse 
+            apartments and unlock your 
+            Home Guide's contact for free.
           </p>
 
           {/* BENEFITS CARD */}
@@ -138,9 +138,9 @@ export default function BrowsePage({ user, setPage }) {
             {[
               { icon: <Home size={16} strokeWidth={1.8} color="#0d1b5e" />, text: "Browse all vacant apartments across 36 states" },
               { icon: <Tag size={16} strokeWidth={1.8} color="#0d1b5e" />, text: "View properties for sale — land, duplex, bungalow" },
-              { icon: <Phone size={16} strokeWidth={1.8} color="#0d1b5e" />, text: "Unlock direct landlord contacts for just ₦200" },
-              { icon: <ShieldCheck size={16} strokeWidth={1.8} color="#0d1b5e" />, text: "Verified listings only — no fake apartments" },
-              { icon: <Ban size={16} strokeWidth={1.8} color="#0d1b5e" />, text: "Zero agent fees. Zero inspection fees. Always." },
+              { icon: <Phone size={16} strokeWidth={1.8} color="#0d1b5e" />, text: "Unlock Home Guide contacts and addresses for free" },
+              { icon: <ShieldCheck size={16} strokeWidth={1.8} color="#0d1b5e" />, text: "Verified Home Guides and real listings" },
+              { icon: <Ban size={16} strokeWidth={1.8} color="#0d1b5e" />, text: "30% off moving with your Arleece ID (₦200)" },
             ].map((item, idx) => (
               <div key={idx} style={{
                 display: "flex",
@@ -268,7 +268,7 @@ export default function BrowsePage({ user, setPage }) {
             Find Your Next Home
           </h1>
           <p style={{ color: "rgba(255,255,255,.56)", fontSize: "0.86rem", marginBottom: 18 }}>
-            Direct from verified landlords, no agent fees.
+            Unlock Home Guide contacts for free.
           </p>
 
           {/* RENT / BUY TOGGLE */}

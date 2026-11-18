@@ -4,6 +4,29 @@ import { Btn, Field, Sel, Card, ErrBox } from '../components/UI'
 import { Ic, I } from '../components/Icons'
 import { NG_STATES, PROP_TYPES, SALE_PROP_TYPES, AMENITIES } from '../data/constants'
 
+// Tiny (about 40px) thumbnail used only for the locked sample cards
+const makeThumb = (file) =>
+  new Promise((resolve) => {
+    try {
+      const url = URL.createObjectURL(file)
+      const img = new Image()
+      img.onload = () => {
+        const w = 40
+        const h = Math.max(1, Math.round((img.height / img.width) * w))
+        const c = document.createElement('canvas')
+        c.width = w
+        c.height = h
+        c.getContext('2d').drawImage(img, 0, 0, w, h)
+        URL.revokeObjectURL(url)
+        resolve(c.toDataURL('image/jpeg', 0.5))
+      }
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(null) }
+      img.src = url
+    } catch {
+      resolve(null)
+    }
+  })
+
 export default function AddListingForm({ onBack, onSubmit, user }) {
   const [listingType, setListingType] = useState(null) 
   const [step, setStep] = useState(1)
@@ -133,30 +156,43 @@ export default function AddListingForm({ onBack, onSubmit, user }) {
         }
       }
 
-      const { data, error } = await supabase.from('listings').insert({
-        title: form.title,
-        type: form.type,
-        state: form.state,
-        area: form.area,
-        price: Number(form.price),
-        kitchs: form.type === 'Land' ? 0 : Number(form.kitchs),
-        baths: form.type === 'Land' ? 0 : Number(form.baths),
-        description: form.desc,
-        landlord_phone: form.landlord_phone,
-        landlord_address: form.landlord_address,
-        amenities: form.amenities,
-        images: imageUrls,
-        videos: videoUrls,
-        status: 'active',
-        landlord_id: user?.id,
-        listing_type: listingType,
-      })
+      const thumb = form.imageFiles?.[0] ? await makeThumb(form.imageFiles[0]) : null
 
-      if (error) {
-        setErr(error.message)
-        setLoading(false)
-        return
-      }
+const { data: created, error } = await supabase.from('listings').insert({
+  title: form.title,
+  type: form.type,
+  state: form.state,
+  area: form.area,
+  price: Number(form.price),
+  kitchs: form.type === 'Land' ? 0 : Number(form.kitchs),
+  baths: form.type === 'Land' ? 0 : Number(form.baths),
+  description: form.desc,
+  amenities: form.amenities,
+  images: imageUrls,
+  videos: videoUrls,
+  thumb,
+  status: 'active',
+  landlord_id: user.id,
+  listing_type: listingType,
+}).select('id').single()
+
+if (error || !created) {
+  setErr(error?.message || "Could not save the listing.")
+  setLoading(false)
+  return
+}
+
+const { error: contactError } = await supabase.from('listing_contacts').insert({
+  listing_id: created.id,
+  phone: form.landlord_phone,
+  address: form.landlord_address,
+})
+
+if (contactError) {
+  setErr("Listing saved but contact details failed: " + contactError.message)
+  setLoading(false)
+  return
+}
 
       onSubmit({
         title: form.title,

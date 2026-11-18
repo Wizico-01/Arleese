@@ -1,223 +1,67 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { Ic, I } from '../Icons'
 import { Btn, Badge } from '../UI'
 import {
-  Phone, MapPin, Tag, Copy, Check, CheckCircle2,
-  Truck, AlertTriangle, Info, Clock, LifeBuoy,
+  Phone, MapPin, Tag, User, CheckCircle2,
+  AlertTriangle, Info, Unlock, BadgePercent,
 } from 'lucide-react'
-
-const PAYSTACK_KEY =
-  import.meta.env.VITE_PAYSTACK_PUBLIC_KEY ||
-  'pk_live_7e4040d2bf01ea308dfc657c49dc25b0e8206643'
-
-const fmtDate = (d) =>
-  d
-    ? new Date(d).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' })
-    : ''
-
-const idState = (u) => {
-  if (!u) return null
-  if (u.status === 'redeemed') return 'used'
-  if (u.expires_at && new Date(u.expires_at) < new Date()) return 'expired'
-  return 'active'
-}
 
 export default function ListingModal({ listing: l, onClose, user, setPage }) {
   const [mainImg, setMainImg] = useState(l.images?.[0] || l.img || "")
   const [showFullImg, setShowFullImg] = useState(false)
-  const [unlock, setUnlock] = useState(null)
+  const [contact, setContact] = useState(null)
   const [checking, setChecking] = useState(!!user?.id)
-  const [starting, setStarting] = useState(false)
-  const [verifying, setVerifying] = useState(false)
-  const [pending, setPending] = useState(null) // reference of a payment we are still waiting for
-  const [copied, setCopied] = useState(false)
+  const [unlocking, setUnlocking] = useState(false)
   const [notice, setNotice] = useState(null) // { type: 'error' | 'info', message }
-  const busy = useRef(false)
-  const polls = useRef(0)
 
   const isSale = l.listing_type === 'sale'
   const isLand = l.type === 'Land'
 
-  const refreshUnlock = async () => {
-    if (!user?.id) return false
-    const { data } = await supabase
-      .from('unlocks')
-      .select('id, code, status, expires_at, paid_at, redeemed_at')
-      .eq('tenant_id', user.id)
-      .eq('listing_id', l.id)
-      .maybeSingle()
-    if (data) {
-      setUnlock(data)
-      setPending(null)
-      setNotice(null)
-      return true
-    }
-    return false
-  }
-
-  // Ask the server whether Paystack has received this payment
-  const verifyPayment = async (reference, silent = false) => {
-    if (!reference || busy.current) return false
-    busy.current = true
-    if (!silent) setVerifying(true)
-    let status = 'error'
-    try {
-      const { data, error } = await supabase.functions.invoke('verify-payment', {
-        body: { reference },
-      })
-      if (!error && data?.status) status = data.status
-    } catch { /* ignore */ }
-    busy.current = false
-    setVerifying(false)
-
-    if (status === 'fulfilled') {
-      await refreshUnlock()
-      return true
-    }
-    if (!silent) {
-      setNotice({
-        type: status === 'failed' || status === 'error' ? 'error' : 'info',
-        message:
-          status === 'failed'
-            ? 'Paystack reports this payment as failed.'
-            : status === 'error'
-            ? 'Could not check right now. Please try again in a moment.'
-            : 'We have not received your payment yet. Bank transfers can take a minute or two.',
-      })
-    }
-    return false
-  }
-
-  // On open: already unlocked? otherwise is a payment still waiting?
+  // Already unlocked earlier? Then show the contact straight away.
   useEffect(() => {
     let cancelled = false
-    const init = async () => {
-      if (!user?.id) { setChecking(false); return }
-      const found = await refreshUnlock()
+    if (!user?.id) { setChecking(false); return }
+    supabase.rpc('get_listing_contact', { p_listing_id: l.id }).then(({ data }) => {
       if (cancelled) return
-      if (!found) {
-        const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString()
-        const { data: p } = await supabase
-          .from('pending_payments')
-          .select('reference')
-          .eq('tenant_id', user.id)
-          .eq('listing_id', l.id)
-          .eq('status', 'pending')
-          .gte('created_at', since)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle()
-        if (!cancelled && p) {
-          setPending(p.reference)
-          verifyPayment(p.reference, true)
-        }
-      }
-      if (!cancelled) setChecking(false)
-    }
-    init()
+      setContact(data || null)
+      setChecking(false)
+    })
     return () => { cancelled = true }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, l.id])
 
-  // While a payment is waiting: re-check every 6 seconds and whenever the app comes back
-  useEffect(() => {
-    if (!pending || unlock) return
-    polls.current = 0
-    const tick = () => {
-      if (polls.current++ < 40) verifyPayment(pending, true)
-    }
-    const id = setInterval(tick, 6000)
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') verifyPayment(pending, true)
-    }
-    document.addEventListener('visibilitychange', onVisible)
-    return () => {
-      clearInterval(id)
-      document.removeEventListener('visibilitychange', onVisible)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pending, unlock])
-
-  const handlePayment = async () => {
-    if (!user?.id || !user?.email) {
-      setNotice({ type: 'error', message: "Please sign in to unlock this contact." })
-      setTimeout(() => {
-        if (typeof setPage === 'function') setPage('login')
-      }, 1200)
+  const handleUnlock = async () => {
+    if (!user?.id) {
+      onClose()
+      setPage('register')
       return
     }
-    if (!window.PaystackPop) {
-      setNotice({ type: 'error', message: "Payment system is loading. Please refresh the page." })
-      return
-    }
-
     setNotice(null)
-    setStarting(true)
-    const { data: reference, error } = await supabase.rpc('start_payment', {
-      p_listing_id: l.id,
-    })
-    setStarting(false)
+    setUnlocking(true)
+    const { data, error } = await supabase.rpc('unlock_listing', { p_listing_id: l.id })
+    setUnlocking(false)
 
-    if (error || !reference) {
+    if (error || !data) {
       setNotice({
         type: 'error',
-        message: error?.message?.includes('Too many')
-          ? 'Too many payment attempts. Please wait a while and try again.'
-          : error?.message?.includes('Already unlocked')
-          ? 'You already unlocked this listing.'
-          : 'Could not start the payment. Please try again.',
+        message: error?.message?.includes('limit')
+          ? 'You have reached the daily unlock limit. Please try again tomorrow.'
+          : 'Could not unlock right now. Please try again.',
       })
-      if (error?.message?.includes('Already unlocked')) refreshUnlock()
       return
     }
-
-    setPending(reference)
-
-    try {
-      const handler = window.PaystackPop.setup({
-        key: PAYSTACK_KEY,
-        email: user.email,
-        amount: 20000, // ₦200 in kobo
-        currency: 'NGN',
-        ref: reference,
-        callback: function () {
-          verifyPayment(reference)
-        },
-        onClose: function () {
-          setNotice({
-            type: 'info',
-            message:
-              'If you paid, or are paying by transfer, tap "Check payment". Your contact unlocks automatically once the payment is confirmed.',
-          })
-        },
-      })
-      handler.openIframe()
-    } catch (e) {
-      console.error('Paystack failed to open:', e)
-      setNotice({ type: 'error', message: "Could not open the payment window. Please try again." })
-    }
+    setContact(data)
+    // The app listens for this to show the Arleece ID offer once per session
+    if (data.is_new) window.dispatchEvent(new Event('arleece:unlocked'))
   }
 
-  const copyId = async () => {
-    try {
-      await navigator.clipboard.writeText(unlock.code)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch { /* ignore */ }
+  const goGetId = () => {
+    onClose()
+    setPage('my-id')
   }
-
-  const phone = l.landlord_phone || l.phone
-  const address = l.landlord_address || `${l.area}, ${l.state}`
-  const st = idState(unlock)
-  const stText =
-    st === 'used' ? `Discount used on ${fmtDate(unlock?.redeemed_at)}` :
-    st === 'expired' ? `Expired on ${fmtDate(unlock?.expires_at)}` :
-    `Valid until ${fmtDate(unlock?.expires_at)}`
 
   const renderAction = () => {
-    // 1. Unlocked: contact + ID
-    if (unlock) {
+    if (contact) {
       return (
         <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 13, padding: "18px 20px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 700, color: "#166534", fontSize: "1rem", marginBottom: 14 }}>
@@ -225,19 +69,25 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {contact.guide_name && (
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: "0.92rem", color: "#1e293b" }}>
+                <User size={16} strokeWidth={1.8} color="#0d1b5e" style={{ marginTop: 2, flexShrink: 0 }} />
+                <span><strong>Home Guide:</strong> {contact.guide_name}</span>
+              </div>
+            )}
             <div style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: "0.92rem", color: "#1e293b" }}>
               <Phone size={16} strokeWidth={1.8} color="#0d1b5e" style={{ marginTop: 2, flexShrink: 0 }} />
-              <span><strong>Home Guide:</strong>{" "}
-                {phone ? (
-                  <a href={`tel:${phone}`} style={{ color: "#0d1b5e", fontWeight: 600, textDecoration: "underline" }}>
-                    {phone}
+              <span><strong>Phone:</strong>{" "}
+                {contact.phone ? (
+                  <a href={`tel:${contact.phone}`} style={{ color: "#0d1b5e", fontWeight: 600, textDecoration: "underline" }}>
+                    {contact.phone}
                   </a>
                 ) : "Not provided"}
               </span>
             </div>
             <div style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: "0.92rem", color: "#1e293b" }}>
               <MapPin size={16} strokeWidth={1.8} color="#0d1b5e" style={{ marginTop: 2, flexShrink: 0 }} />
-              <span><strong>Address:</strong> {address}</span>
+              <span><strong>Address:</strong> {contact.address || `${l.area}, ${l.state}`}</span>
             </div>
             <div style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: "0.92rem", color: "#1e293b" }}>
               <Tag size={16} strokeWidth={1.8} color="#0d1b5e" style={{ marginTop: 2, flexShrink: 0 }} />
@@ -245,91 +95,30 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
             </div>
           </div>
 
-          <div style={{ background: "#0d1b5e", borderRadius: 12, padding: "16px 18px", marginTop: 16, color: "#fff" }}>
-            <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.1em", color: "#9db7ff", marginBottom: 6 }}>
-              YOUR ARLEECE ID
-            </div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-              <div style={{ fontFamily: "'Courier New', monospace", fontSize: "1.7rem", fontWeight: 700, letterSpacing: "0.12em" }}>
-                {unlock.code}
-              </div>
-              <button
-                onClick={copyId}
-                style={{
-                  background: "rgba(255,255,255,.14)", color: "#fff",
-                  border: "1px solid rgba(255,255,255,.3)", borderRadius: 8,
-                  padding: "7px 12px", fontSize: "0.78rem", fontWeight: 600,
-                  cursor: "pointer", fontFamily: "inherit",
-                  display: "flex", alignItems: "center", gap: 6,
-                }}
-              >
-                {copied ? <Check size={14} /> : <Copy size={14} />}
-                {copied ? "Copied" : "Copy"}
-              </button>
-            </div>
-            <div style={{ fontSize: "0.76rem", marginTop: 8, color: "rgba(255,255,255,.7)" }}>
-              {stText}
-            </div>
-          </div>
-
           <div style={{
-            display: "flex", gap: 10, alignItems: "flex-start",
+            display: "flex", gap: 10, alignItems: "center", justifyContent: "space-between",
             background: "#eef2ff", border: "1px solid #c7d4fd",
-            borderRadius: 10, padding: "12px 14px", marginTop: 12,
-            fontSize: "0.8rem", color: "#1e3db5", lineHeight: 1.6,
+            borderRadius: 10, padding: "12px 14px", marginTop: 16,
           }}>
-            <Truck size={16} strokeWidth={1.8} style={{ marginTop: 2, flexShrink: 0 }} />
-            <span>
-              Show this ID to the Arleece logistics partner to claim 30% off your move.
-              You pay the logistics company directly. Arleece does not collect logistics payments.
+            <span style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: "0.8rem", color: "#1e3db5", lineHeight: 1.55 }}>
+              <BadgePercent size={16} strokeWidth={1.8} style={{ marginTop: 2, flexShrink: 0 }} />
+              Moving soon? Get 30% off your move with an Arleece ID.
             </span>
-          </div>
-        </div>
-      )
-    }
-
-    // 2. Payment started, not confirmed yet
-    if (pending) {
-      return (
-        <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 13, padding: "18px 20px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 700, color: "#92400e", fontSize: "0.98rem", marginBottom: 6 }}>
-            <Clock size={18} strokeWidth={2} /> Waiting for your payment
-          </div>
-          <p style={{ color: "#92400e", fontSize: "0.82rem", lineHeight: 1.65, marginBottom: 14 }}>
-            Paid by transfer? It can take a minute or two. Your contact and Arleece ID unlock
-            automatically once Paystack confirms it, even if you close the app.
-          </p>
-          <Btn onClick={() => verifyPayment(pending)} disabled={verifying}>
-            {verifying ? "Checking…" : "Check payment"}
-          </Btn>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 14 }}>
             <button
-              onClick={() => setPage('unlock-help')}
+              onClick={goGetId}
               style={{
-                background: "none", border: "none", padding: 0, textAlign: "left",
-                color: "#1e3db5", fontSize: "0.8rem", fontWeight: 600,
-                cursor: "pointer", fontFamily: "inherit",
-                display: "flex", alignItems: "center", gap: 6,
+                background: "#0d1b5e", color: "#fff", border: "none", borderRadius: 8,
+                padding: "8px 12px", fontSize: "0.76rem", fontWeight: 700,
+                cursor: "pointer", fontFamily: "inherit", flexShrink: 0,
               }}
             >
-              <LifeBuoy size={14} /> Paid but still nothing? Contact us
-            </button>
-            <button
-              onClick={() => setPending(null)}
-              style={{
-                background: "none", border: "none", padding: 0, textAlign: "left",
-                color: "#6b7280", fontSize: "0.78rem",
-                cursor: "pointer", fontFamily: "inherit",
-              }}
-            >
-              I have not paid. Start a new payment
+              Get my ID
             </button>
           </div>
         </div>
       )
     }
 
-    // 3. Listing no longer available
     if (l.status === 'rented') {
       return (
         <div style={{ background: "#fee2e2", border: "1px solid #fca5a5", borderRadius: 13, padding: "18px 20px", textAlign: "center" }}>
@@ -343,16 +132,14 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
       )
     }
 
-    // 4. Still checking
     if (checking) {
       return (
         <div style={{ textAlign: "center", color: "#9ca3af", fontSize: "0.84rem", padding: "18px 0" }}>
-          Checking your unlock status…
+          Checking…
         </div>
       )
     }
 
-    // 5. Not unlocked yet
     return (
       <div style={{ background: "linear-gradient(135deg,#f0f3ff,#eaefff)", border: "1px solid #c7d4fd", borderRadius: 13, padding: "18px 20px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
@@ -361,11 +148,11 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
               Unlock your Home Guide's contact
             </div>
             <div style={{ color: "#6b7280", fontSize: "0.79rem", lineHeight: 1.5 }}>
-              One-time ₦200. You also get your personal Arleece ID for 30% off your move.
+              Free for every signed-in user. You get the phone number and the home address.
             </div>
           </div>
-          <Btn onClick={handlePayment} disabled={starting}>
-            <Ic d={I.lock} s={14} /> {starting ? "Starting…" : "Unlock for ₦200"}
+          <Btn onClick={handleUnlock} disabled={unlocking}>
+            <Unlock size={14} /> {unlocking ? "Unlocking…" : user ? "Unlock contact (free)" : "Sign up to unlock"}
           </Btn>
         </div>
       </div>

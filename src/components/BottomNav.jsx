@@ -2,26 +2,28 @@ import { Ic, I } from './Icons'
 
 export default function BottomNav({ page, setPage, user }) {
   const tabs =
-  user?.role === 'landlord'
-    ? [
-        { id: 'home', label: 'Home', icon: I.home },
-        { id: 'browse', label: 'Browse', icon: I.search },
-        { id: 'saved', label: 'Unlocked', icon: I.star },
-        { id: 'dashboard', label: 'Dashboard', icon: I.building },
-        { id: 'profile', label: 'Profile', icon: I.user },
-      ]
-    : user?.role === 'logistics'
-    ? [
-        { id: 'home', label: 'Home', icon: I.home },
-        { id: 'logistics', label: 'Verify ID', icon: I.shield },
-        { id: 'profile', label: 'Profile', icon: I.user },
-      ]
-    : [
-        { id: 'home', label: 'Home', icon: I.home },
-        { id: 'browse', label: 'Browse', icon: I.search },
-        { id: 'saved', label: 'Unlocked', icon: I.star },
-        { id: 'profile', label: 'Profile', icon: I.user },
-      ]
+    user?.role === 'landlord'
+      ? [
+          { id: 'home', label: 'Home', icon: I.home },
+          { id: 'browse', label: 'Browse', icon: I.search },
+          { id: 'saved', label: 'Unlocked', icon: I.star },
+          { id: 'my-id', label: 'My ID', icon: I.key },
+          { id: 'dashboard', label: 'Dashboard', icon: I.building },
+          { id: 'profile', label: 'Profile', icon: I.user },
+        ]
+      : user?.role === 'logistics'
+      ? [
+          { id: 'home', label: 'Home', icon: I.home },
+          { id: 'logistics', label: 'Verify ID', icon: I.shield },
+          { id: 'profile', label: 'Profile', icon: I.user },
+        ]
+      : [
+          { id: 'home', label: 'Home', icon: I.home },
+          { id: 'browse', label: 'Browse', icon: I.search },
+          { id: 'saved', label: 'Unlocked', icon: I.star },
+          { id: 'my-id', label: 'My ID', icon: I.key },
+          { id: 'profile', label: 'Profile', icon: I.user },
+        ]
 
   return (
     <div style={{
@@ -35,7 +37,6 @@ export default function BottomNav({ page, setPage, user }) {
       borderTop: "1px solid #e8e8e0",
       display: "flex",
       alignItems: "center",
-      justifyContent: "space-around",
       zIndex: 999,
       boxShadow: "0 -2px 12px rgba(0,0,0,.08)",
       paddingBottom: "env(safe-area-inset-bottom)",
@@ -53,6 +54,7 @@ export default function BottomNav({ page, setPage, user }) {
               }
             }}
             style={{
+              flex: 1,
               background: "none",
               border: "none",
               cursor: "pointer",
@@ -60,28 +62,23 @@ export default function BottomNav({ page, setPage, user }) {
               flexDirection: "column",
               alignItems: "center",
               gap: 3,
-              padding: "6px 16px",
-              borderRadius: 10,
-              transition: "all .2s",
+              padding: "6px 2px",
+              minWidth: 0,
             }}
           >
             <div style={{ color: active ? "#0d1b5e" : "#9ca3af" }}>
               <Ic d={tab.icon} s={22} />
             </div>
             <span style={{
-              fontSize: "0.68rem",
+              fontSize: "0.64rem",
               fontWeight: active ? 700 : 400,
               color: active ? "#0d1b5e" : "#9ca3af",
+              whiteSpace: "nowrap",
             }}>
               {tab.label}
             </span>
             {active && (
-              <div style={{
-                width: 4,
-                height: 4,
-                borderRadius: "50%",
-                background: "#0d1b5e",
-              }} />
+              <div style={{ width: 4, height: 4, borderRadius: "50%", background: "#0d1b5e" }} />
             )}
           </button>
         )

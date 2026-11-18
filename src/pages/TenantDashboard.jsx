@@ -1,111 +1,71 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import {
-  Phone, MapPin, Tag, User, Copy, Check, Lock, Home, Truck, LifeBuoy,
-} from 'lucide-react'
+import { Phone, MapPin, Tag, User, Lock, Home, KeyRound, BadgePercent } from 'lucide-react'
 
 const fmtDate = (d) =>
-  d
-    ? new Date(d).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' })
-    : ''
-
-const idState = (u) => {
-  if (u.status === 'redeemed') return 'used'
-  if (u.expires_at && new Date(u.expires_at) < new Date()) return 'expired'
-  return 'active'
-}
+  d ? new Date(d).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' }) : ''
 
 export default function TenantDashboard({ user, setPage }) {
-  const [unlocks, setUnlocks] = useState([])
+  const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState("")
-  const [copiedId, setCopiedId] = useState(null)
+  const [activeId, setActiveId] = useState(null)
 
   useEffect(() => {
     if (!user?.id) { setLoading(false); return }
-    fetchUnlocks()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user])
+    const load = async () => {
+      setLoading(true)
+      setErr("")
+      try {
+        const { data: contacts, error } = await supabase.rpc('my_unlocked_contacts')
+        if (error) { setErr("Could not load your unlocked contacts. Please try again."); setLoading(false); return }
 
-  const fetchUnlocks = async () => {
-    setLoading(true)
-    setErr("")
-    try {
-      const { data: unlockRows, error: unlockError } = await supabase
-        .from('unlocks')
-        .select('id, amount, paid_at, listing_id, code, status, expires_at, redeemed_at')
-        .eq('tenant_id', user.id)
-        .order('paid_at', { ascending: false })
+        const ids = (contacts || []).map(c => c.listing_id)
+        let listingRows = []
+        if (ids.length) {
+          const { data } = await supabase
+            .from('listings')
+            .select('id, title, area, state, price, images, listing_type')
+            .in('id', ids)
+          listingRows = data || []
+        }
+        setRows((contacts || []).map(c => ({
+          ...c,
+          listing: listingRows.find(l => l.id === c.listing_id) || null,
+        })))
 
-      if (unlockError) {
-        setErr("Could not load your unlocked contacts. Please try again.")
-        setLoading(false)
-        return
+        const { data: idRows } = await supabase
+          .from('arleece_ids')
+          .select('id_code, expires_at')
+          .eq('user_id', user.id)
+          .eq('status', 'active')
+          .gt('expires_at', new Date().toISOString())
+          .limit(1)
+        setActiveId(idRows?.[0] || null)
+      } catch {
+        setErr("Something went wrong. Please refresh the page.")
       }
-
-      if (!unlockRows || unlockRows.length === 0) {
-        setUnlocks([])
-        setLoading(false)
-        return
-      }
-
-      const listingIds = unlockRows.map(u => u.listing_id).filter(Boolean)
-      const { data: listingRows } = await supabase
-        .from('listings')
-        .select('id, title, area, state, price, images, landlord_phone, landlord_address, landlord_id, listing_type')
-        .in('id', listingIds)
-
-      const guideIds = (listingRows || []).map(l => l.landlord_id).filter(Boolean)
-      let profileRows = []
-      if (guideIds.length > 0) {
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id, full_name, phone')
-          .in('id', guideIds)
-        profileRows = profiles || []
-      }
-
-      const combined = unlockRows.map(u => {
-        const listing = (listingRows || []).find(l => l.id === u.listing_id) || null
-        const profile = profileRows.find(p => p.id === listing?.landlord_id) || null
-        return { ...u, listing, profile }
-      })
-
-      setUnlocks(combined)
-    } catch (e) {
-      setErr("Something went wrong. Please refresh the page.")
+      setLoading(false)
     }
-    setLoading(false)
-  }
-
-  const copyCode = async (u) => {
-    try {
-      await navigator.clipboard.writeText(u.code)
-      setCopiedId(u.id)
-      setTimeout(() => setCopiedId(null), 2000)
-    } catch { /* ignore */ }
-  }
+    load()
+  }, [user?.id])
 
   if (!user) return (
     <div style={{
       minHeight: "100vh", background: "#f4f3ef",
-      display: "flex", alignItems: "center",
-      justifyContent: "center", padding: 24,
-      flexDirection: "column", gap: 16,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      padding: 24, flexDirection: "column", gap: 16,
     }}>
       <Lock size={40} strokeWidth={1.5} color="#0d1b5e" />
-      <h2 style={{
-        fontFamily: "'DM Serif Display',serif",
-        color: "#0d1b5e", fontSize: "1.4rem", textAlign: "center",
-      }}>
+      <h2 style={{ fontFamily: "'DM Serif Display',serif", color: "#0d1b5e", fontSize: "1.4rem", textAlign: "center" }}>
         Sign in to view your unlocked contacts
       </h2>
       <button
         onClick={() => setPage('login')}
         style={{
-          background: "#0d1b5e", color: "#fff", border: "none",
-          borderRadius: 9, padding: "12px 32px", cursor: "pointer",
-          fontSize: "0.9rem", fontWeight: 600, fontFamily: "inherit",
+          background: "#0d1b5e", color: "#fff", border: "none", borderRadius: 9,
+          padding: "12px 32px", cursor: "pointer", fontSize: "0.9rem",
+          fontWeight: 600, fontFamily: "inherit",
         }}
       >
         Sign In
@@ -115,62 +75,66 @@ export default function TenantDashboard({ user, setPage }) {
 
   return (
     <div style={{ background: "#f4f3ef", minHeight: "100vh", paddingBottom: 80 }}>
-
-      {/* HEADER */}
-      <div style={{
-        background: "linear-gradient(135deg,#060e33,#0d1b5e)",
-        padding: "36px 20px 28px",
-      }}>
-        <h1 style={{
-          fontFamily: "'DM Serif Display',serif",
-          color: "#fff", fontSize: "1.7rem", marginBottom: 6,
-        }}>
+      <div style={{ background: "linear-gradient(135deg,#060e33,#0d1b5e)", padding: "36px 20px 28px" }}>
+        <h1 style={{ fontFamily: "'DM Serif Display',serif", color: "#fff", fontSize: "1.7rem", marginBottom: 6 }}>
           My Unlocked Contacts
         </h1>
         <p style={{ color: "rgba(255,255,255,.6)", fontSize: "0.85rem" }}>
-          {unlocks.length} Home Guide contact{unlocks.length !== 1 ? "s" : ""} unlocked
+          {rows.length} Home Guide contact{rows.length !== 1 ? "s" : ""} unlocked
         </p>
       </div>
 
       <div style={{ padding: "20px 16px" }}>
 
+        {/* ARLEECE ID BANNER */}
+        <div style={{
+          background: "#fff", border: "1px solid #e8e8e0", borderRadius: 14,
+          padding: "14px 16px", marginBottom: 16,
+          display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+        }}>
+          <div style={{ display: "flex", gap: 10, alignItems: "center", minWidth: 0 }}>
+            {activeId
+              ? <KeyRound size={20} color="#166534" style={{ flexShrink: 0 }} />
+              : <BadgePercent size={20} color="#0d1b5e" style={{ flexShrink: 0 }} />}
+            <div style={{ minWidth: 0 }}>
+              {activeId ? (
+                <>
+                  <div style={{ fontSize: "0.7rem", color: "#9ca3af", fontWeight: 700, letterSpacing: "0.06em" }}>YOUR ARLEECE ID</div>
+                  <div style={{ fontFamily: "'Courier New', monospace", fontWeight: 700, color: "#0d1b5e", fontSize: "1.05rem", letterSpacing: "0.08em" }}>
+                    {activeId.id_code}
+                  </div>
+                </>
+              ) : (
+                <div style={{ fontSize: "0.82rem", color: "#4b5563", lineHeight: 1.5 }}>
+                  Get an Arleece ID for 30% off your move.
+                </div>
+              )}
+            </div>
+          </div>
+          <button
+            onClick={() => setPage('my-id')}
+            style={{
+              background: "#0d1b5e", color: "#fff", border: "none", borderRadius: 8,
+              padding: "9px 14px", fontSize: "0.78rem", fontWeight: 700,
+              cursor: "pointer", fontFamily: "inherit", flexShrink: 0,
+            }}
+          >
+            {activeId ? "Open" : "Get my ID"}
+          </button>
+        </div>
+
         {err && (
           <div style={{
-            background: "#fef2f2", border: "1px solid #fca5a5",
-            borderRadius: 10, padding: "12px 16px",
-            color: "#991b1b", fontSize: "0.84rem", marginBottom: 16,
+            background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 10,
+            padding: "12px 16px", color: "#991b1b", fontSize: "0.84rem", marginBottom: 16,
           }}>
             {err}
           </div>
         )}
 
-        {loading && (
-          <div style={{ textAlign: "center", padding: "40px 0", color: "#9ca3af" }}>
-            Loading your contacts…
-          </div>
-        )}
+        {loading && <div style={{ textAlign: "center", padding: "40px 0", color: "#9ca3af" }}>Loading your contacts…</div>}
 
-<div style={{
-  background: "#fff", border: "1px solid #e8e8e0", borderRadius: 12,
-  padding: "12px 14px", marginBottom: 16,
-  display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
-}}>
-  <span style={{ display: "flex", alignItems: "center", gap: 8, color: "#4b5563", fontSize: "0.8rem", lineHeight: 1.5 }}>
-    <LifeBuoy size={16} color="#0d1b5e" style={{ flexShrink: 0 }} />
-    Paid but your contact is missing?
-  </span>
-  <button
-    onClick={() => setPage('unlock-help')}
-    style={{
-      background: "#0d1b5e", color: "#fff", border: "none", borderRadius: 8,
-      padding: "8px 14px", fontSize: "0.78rem", fontWeight: 600,
-      cursor: "pointer", fontFamily: "inherit", flexShrink: 0,
-    }}
-  >
-    Contact us
-  </button>
-</div>
-        {!loading && unlocks.length === 0 && !err && (
+        {!loading && rows.length === 0 && !err && (
           <div style={{
             background: "#fff", borderRadius: 16, padding: "40px 24px",
             textAlign: "center", border: "1px solid #e8e8e0",
@@ -178,21 +142,18 @@ export default function TenantDashboard({ user, setPage }) {
             <div style={{ display: "flex", justifyContent: "center", marginBottom: 14 }}>
               <Home size={40} strokeWidth={1.4} color="#0d1b5e" />
             </div>
-            <h3 style={{
-              fontFamily: "'DM Serif Display',serif",
-              color: "#0d1b5e", fontSize: "1.2rem", marginBottom: 8,
-            }}>
+            <h3 style={{ fontFamily: "'DM Serif Display',serif", color: "#0d1b5e", fontSize: "1.2rem", marginBottom: 8 }}>
               No unlocked contacts yet
             </h3>
             <p style={{ color: "#6b7280", fontSize: "0.85rem", marginBottom: 20 }}>
-              Browse apartments and unlock a Home Guide's contact for ₦200.
+              Browse apartments and unlock a Home Guide's contact for free.
             </p>
             <button
               onClick={() => setPage('browse')}
               style={{
-                background: "#0d1b5e", color: "#fff", border: "none",
-                borderRadius: 9, padding: "12px 24px", cursor: "pointer",
-                fontSize: "0.9rem", fontWeight: 600, fontFamily: "inherit",
+                background: "#0d1b5e", color: "#fff", border: "none", borderRadius: 9,
+                padding: "12px 24px", cursor: "pointer", fontSize: "0.9rem",
+                fontWeight: 600, fontFamily: "inherit",
               }}
             >
               Browse Apartments
@@ -200,149 +161,64 @@ export default function TenantDashboard({ user, setPage }) {
           </div>
         )}
 
-        {!loading && unlocks.map(u => {
-          const listing = u.listing
-          const profile = u.profile
-          const guideName = profile?.full_name || null
-          const phone = listing?.landlord_phone || profile?.phone || null
-          const areaState = listing?.area && listing?.state
-            ? `${listing.area}, ${listing.state}`
-            : null
-          const address = listing?.landlord_address || areaState || "Address not provided"
-          const st = idState(u)
-          const sale = listing?.listing_type === 'sale'
-
-          const chip = {
-            active: { bg: "#dcfce7", color: "#166534", text: `Valid until ${fmtDate(u.expires_at)}` },
-            used: { bg: "#e5e7eb", color: "#374151", text: `Discount used on ${fmtDate(u.redeemed_at)}` },
-            expired: { bg: "#fee2e2", color: "#991b1b", text: `Expired on ${fmtDate(u.expires_at)}` },
-          }[st]
-
+        {!loading && rows.map(r => {
+          const l = r.listing
+          const sale = l?.listing_type === 'sale'
           return (
-            <div key={u.id} style={{
-              background: "#fff", borderRadius: 16,
-              overflow: "hidden", border: "1px solid #e8e8e0",
-              boxShadow: "0 2px 6px rgba(0,0,0,.04)",
-              marginBottom: 16,
+            <div key={r.listing_id} style={{
+              background: "#fff", borderRadius: 16, overflow: "hidden",
+              border: "1px solid #e8e8e0", boxShadow: "0 2px 6px rgba(0,0,0,.04)", marginBottom: 16,
             }}>
-              {listing?.images?.[0] && (
-                <img
-                  src={listing.images[0]}
-                  alt={listing?.title}
-                  style={{ width: "100%", height: 160, objectFit: "cover", display: "block" }}
-                />
+              {l?.images?.[0] && (
+                <img src={l.images[0]} alt={l.title} style={{ width: "100%", height: 160, objectFit: "cover", display: "block" }} />
               )}
-
               <div style={{ padding: 16 }}>
-                <h3 style={{
-                  fontFamily: "'DM Serif Display',serif",
-                  color: "#0d1b5e", fontSize: "1.1rem", marginBottom: 4,
-                }}>
-                  {listing?.title || "Apartment"}
+                <h3 style={{ fontFamily: "'DM Serif Display',serif", color: "#0d1b5e", fontSize: "1.1rem", marginBottom: 4 }}>
+                  {l?.title || "Apartment"}
                 </h3>
-                {areaState && (
-                  <p style={{
-                    color: "#6b7280", fontSize: "0.78rem", marginBottom: 14,
-                    display: "flex", alignItems: "center", gap: 5,
-                  }}>
-                    <MapPin size={13} /> {areaState}
+                {l?.area && (
+                  <p style={{ color: "#6b7280", fontSize: "0.78rem", marginBottom: 14, display: "flex", alignItems: "center", gap: 5 }}>
+                    <MapPin size={13} /> {l.area}, {l.state}
                   </p>
                 )}
 
-                {/* ARLEECE ID */}
-                {u.code && (
-                  <div style={{
-                    background: "#0d1b5e", borderRadius: 12,
-                    padding: "14px 16px", marginBottom: 14, color: "#fff",
-                  }}>
-                    <div style={{ fontSize: "0.66rem", fontWeight: 700, letterSpacing: "0.1em", color: "#9db7ff", marginBottom: 6 }}>
-                      YOUR ARLEECE ID
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                      <div style={{ fontFamily: "'Courier New', monospace", fontSize: "1.6rem", fontWeight: 700, letterSpacing: "0.12em" }}>
-                        {u.code}
-                      </div>
-                      <button
-                        onClick={() => copyCode(u)}
-                        style={{
-                          background: "rgba(255,255,255,.14)", color: "#fff",
-                          border: "1px solid rgba(255,255,255,.3)", borderRadius: 8,
-                          padding: "7px 12px", fontSize: "0.78rem", fontWeight: 600,
-                          cursor: "pointer", fontFamily: "inherit",
-                          display: "flex", alignItems: "center", gap: 6,
-                        }}
-                      >
-                        {copiedId === u.id ? <Check size={14} /> : <Copy size={14} />}
-                        {copiedId === u.id ? "Copied" : "Copy"}
-                      </button>
-                    </div>
-                    <div style={{
-                      display: "inline-block", marginTop: 10,
-                      background: chip.bg, color: chip.color,
-                      borderRadius: 6, padding: "3px 10px",
-                      fontSize: "0.72rem", fontWeight: 700,
-                    }}>
-                      {chip.text}
-                    </div>
-                    <div style={{
-                      display: "flex", gap: 8, alignItems: "flex-start",
-                      marginTop: 10, fontSize: "0.76rem",
-                      color: "rgba(255,255,255,.75)", lineHeight: 1.5,
-                    }}>
-                      <Truck size={14} style={{ flexShrink: 0, marginTop: 2 }} />
-                      Show this ID to the Arleece logistics partner for 30% off your move.
-                    </div>
-                  </div>
-                )}
-
-                {/* HOME GUIDE CONTACT */}
-                <div style={{
-                  background: "#f0f7ff", border: "1px solid #c7d4fd",
-                  borderRadius: 12, padding: "14px 16px", marginBottom: 14,
-                }}>
-                  <div style={{
-                    fontSize: "0.68rem", fontWeight: 700,
-                    color: "#1e3db5", letterSpacing: "0.08em", marginBottom: 12,
-                  }}>
+                <div style={{ background: "#f0f7ff", border: "1px solid #c7d4fd", borderRadius: 12, padding: "14px 16px", marginBottom: 12 }}>
+                  <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#1e3db5", letterSpacing: "0.08em", marginBottom: 12 }}>
                     VERIFIED HOME GUIDE CONTACT
                   </div>
-
                   <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                    {guideName && (
+                    {r.guide_name && (
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <User size={18} strokeWidth={1.7} color="#0d1b5e" />
                         <div>
                           <div style={{ fontSize: "0.68rem", color: "#9ca3af", marginBottom: 2 }}>HOME GUIDE</div>
-                          <div style={{ fontSize: "0.9rem", fontWeight: 700, color: "#0d1b5e" }}>{guideName}</div>
+                          <div style={{ fontSize: "0.9rem", fontWeight: 700, color: "#0d1b5e" }}>{r.guide_name}</div>
                         </div>
                       </div>
                     )}
-
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       <Phone size={18} strokeWidth={1.7} color="#0d1b5e" />
                       <div>
                         <div style={{ fontSize: "0.68rem", color: "#9ca3af", marginBottom: 2 }}>PHONE NUMBER</div>
-                        {phone ? (
-                          <a href={`tel:${phone}`} style={{ fontSize: "1rem", fontWeight: 700, color: "#1e3db5", textDecoration: "none" }}>
-                            {phone}
+                        {r.phone ? (
+                          <a href={`tel:${r.phone}`} style={{ fontSize: "1rem", fontWeight: 700, color: "#1e3db5", textDecoration: "none" }}>
+                            {r.phone}
                           </a>
                         ) : (
-                          <span style={{ fontSize: "0.85rem", color: "#b91c1c", fontWeight: 600 }}>
-                            Not provided. Contact Arleece support
-                          </span>
+                          <span style={{ fontSize: "0.85rem", color: "#b91c1c", fontWeight: 600 }}>Not provided</span>
                         )}
                       </div>
                     </div>
-
                     <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
                       <MapPin size={18} strokeWidth={1.7} color="#0d1b5e" style={{ marginTop: 2 }} />
                       <div>
-                        <div style={{ fontSize: "0.68rem", color: "#9ca3af", marginBottom: 2 }}>PROPERTY ADDRESS</div>
-                        <div style={{ fontSize: "0.9rem", fontWeight: 600, color: "#0d1b5e" }}>{address}</div>
+                        <div style={{ fontSize: "0.68rem", color: "#9ca3af", marginBottom: 2 }}>HOME ADDRESS</div>
+                        <div style={{ fontSize: "0.9rem", fontWeight: 600, color: "#0d1b5e" }}>
+                          {r.address || (l ? `${l.area}, ${l.state}` : "Not provided")}
+                        </div>
                       </div>
                     </div>
-
-                    {listing?.price && (
+                    {l?.price && (
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <Tag size={18} strokeWidth={1.7} color="#0d1b5e" />
                         <div>
@@ -350,7 +226,7 @@ export default function TenantDashboard({ user, setPage }) {
                             {sale ? "PRICE" : "ANNUAL RENT"}
                           </div>
                           <div style={{ fontSize: "0.9rem", fontWeight: 700, color: "#0d1b5e" }}>
-                            ₦{listing.price.toLocaleString()}{sale ? "" : "/year"}
+                            ₦{l.price.toLocaleString()}{sale ? "" : "/year"}
                           </div>
                         </div>
                       </div>
@@ -358,17 +234,8 @@ export default function TenantDashboard({ user, setPage }) {
                   </div>
                 </div>
 
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div style={{
-                    background: "#dcfce7", color: "#166534",
-                    borderRadius: 8, padding: "4px 10px",
-                    fontSize: "0.76rem", fontWeight: 700,
-                  }}>
-                    Paid ₦{u.amount?.toLocaleString() || 200}
-                  </div>
-                  <span style={{ fontSize: "0.72rem", color: "#9ca3af" }}>
-                    {fmtDate(u.paid_at)}
-                  </span>
+                <div style={{ fontSize: "0.72rem", color: "#9ca3af", textAlign: "right" }}>
+                  Unlocked {fmtDate(r.unlocked_at)}
                 </div>
               </div>
             </div>

@@ -58,7 +58,7 @@ export default function Footer({ setPage }) {
       }}>
         © {new Date().getFullYear()} Arleece.
         <br />
-        Fighting unfair agent fees, one listing at a time.
+        Helping Nigerians find homes and move in for less.
       </p>
     </footer>
   )

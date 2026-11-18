@@ -233,7 +233,7 @@ export default function DashboardPage({ user, setPage }) {
         <div style={{ maxWidth: 1080, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
           <div>
             <h1 style={{ fontFamily: "'DM Serif Display',serif", color: "#fff", fontSize: "1.6rem", marginBottom: 5 }}>
-              Welcome, {user?.name?.split(" ")[0] || "Landlord"}
+              Welcome, {user?.name?.split(" ")[0] || "Home Guide"}
             </h1>
             {!user?.verified && (
               <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(253,224,71,.12)", border: "1px solid rgba(253,224,71,.3)", borderRadius: 8, padding: "4px 11px", color: "#fde047", fontSize: "0.76rem" }}>

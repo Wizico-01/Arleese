@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from './lib/supabase'
 import BottomNav from './components/BottomNav'
 import TenantDashboard from './pages/TenantDashboard'
@@ -13,8 +13,8 @@ import ProfilePage from './pages/ProfilePage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import LogisticsPage from './pages/LogisticsPage'
 import EmailConfirmedPage from './pages/EmailConfirmedPage'
-import UnlockHelpPage from './pages/UnlockHelpPage'
-import AdminPage from './pages/AdminPage'
+import MyIdPage from './pages/MyIdPage'
+import OfferPopup from './components/OfferPopup'
 import OnboardingSlider from './components/OnboardingSlider'
 
 // Read the link type BEFORE Supabase clears the URL hash
@@ -27,6 +27,8 @@ const IS_LINK_ERROR =
   !IS_RECOVERY && !IS_EMAIL_CONFIRM && LANDING_HASH.includes('error_code=')
 const LINK_STATUS = IS_LINK_ERROR ? 'expired' : 'success'
 
+const NO_OFFER_PAGES = ['login', 'register', 'register-landlord', 'reset-password', 'email-confirmed', 'my-id']
+
 export default function App() {
   const [page, setPage] = useState(() => {
     if (IS_RECOVERY) return 'reset-password'
@@ -35,18 +37,50 @@ export default function App() {
     const validPages = [
       'home', 'browse', 'login', 'register', 'register-landlord',
       'dashboard', 'profile', 'terms', 'saved', 'unlocked-contacts',
-      'logistics', 'unlock-help', 'admin', 'reset-password',
+      'my-id', 'logistics', 'reset-password',
     ]
     return validPages.includes(hash) ? hash : 'home'
   })
   const [user, setUser] = useState(null)
   const [pageHistory, setPageHistory] = useState(['home'])
   const [payNotice, setPayNotice] = useState("")
+  const [offer, setOffer] = useState(null) // null | 'login' | 'unlock'
 
-  // Onboarding shows on every open, except when arriving from an email link
+  const userRef = useRef(null)
+  const pageRef = useRef(page)
+  userRef.current = user
+  pageRef.current = page
+
   const [showOnboarding, setShowOnboarding] = useState(
     !(IS_RECOVERY || IS_EMAIL_CONFIRM || IS_LINK_ERROR)
   )
+
+  // Shows the Arleece ID offer: once per session per trigger, never to people who already have an ID
+  const maybeOffer = async (uid, role, context) => {
+    if (!uid || role === 'logistics') return
+    const key = `arl_offer_${context}`
+    try {
+      if (sessionStorage.getItem(key)) return
+      if (context === 'login') {
+        const last = Number(localStorage.getItem('arl_offer_skipped_at') || 0)
+        if (Date.now() - last < 24 * 3600 * 1000) return
+      }
+    } catch { /* storage blocked: continue */ }
+
+    const { data } = await supabase
+      .from('arleece_ids')
+      .select('id')
+      .eq('user_id', uid)
+      .in('status', ['active', 'used'])
+      .limit(1)
+    if (data && data.length) return
+
+    setTimeout(() => {
+      if (NO_OFFER_PAGES.includes(pageRef.current)) return
+      try { sessionStorage.setItem(key, '1') } catch { /* ignore */ }
+      setOffer(context)
+    }, context === 'login' ? 1500 : 400)
+  }
 
   const loadProfile = (session) => {
     supabase
@@ -67,6 +101,7 @@ export default function App() {
           if (profile.role === 'logistics') {
             setPage(p => (['home', 'browse', 'login'].includes(p) ? 'logistics' : p))
           }
+          maybeOffer(session.user.id, profile.role, 'login')
         }
       })
   }
@@ -96,6 +131,18 @@ export default function App() {
     })
 
     return () => subscription.unsubscribe()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Offer again right after a free unlock (once per session)
+  useEffect(() => {
+    const onUnlocked = () => {
+      const u = userRef.current
+      if (u) maybeOffer(u.id, u.role, 'unlock')
+    }
+    window.addEventListener('arleece:unlocked', onUnlocked)
+    return () => window.removeEventListener('arleece:unlocked', onUnlocked)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Confirm any payment that was started but never finished on screen
@@ -124,11 +171,7 @@ export default function App() {
         } catch { /* ignore */ }
       }
       if (!cancelled && confirmed > 0) {
-        setPayNotice(
-          confirmed === 1
-            ? "Your payment was confirmed. Your contact and Arleece ID are now in Unlocked."
-            : `${confirmed} payments were confirmed. Your contacts and Arleece IDs are now in Unlocked.`
-        )
+        setPayNotice("Your payment was confirmed. Your Arleece ID is ready in My ID.")
       }
     }
 
@@ -143,7 +186,6 @@ export default function App() {
     }
   }, [user?.id])
 
-  // Handle browser back button
   useEffect(() => {
     const handlePop = () => {
       setPageHistory(prev => {
@@ -166,6 +208,13 @@ export default function App() {
     setPage(newPage)
   }
 
+  const closeOffer = (skipped) => {
+    if (skipped) {
+      try { localStorage.setItem('arl_offer_skipped_at', String(Date.now())) } catch { /* ignore */ }
+    }
+    setOffer(null)
+  }
+
   const dismissOnboarding = () => {
     setShowOnboarding(false)
   }
@@ -174,6 +223,11 @@ export default function App() {
     await supabase.auth.signOut()
     setUser(null)
     setPayNotice("")
+    setOffer(null)
+    try {
+      sessionStorage.removeItem('arl_offer_login')
+      sessionStorage.removeItem('arl_offer_unlock')
+    } catch { /* ignore */ }
     setPageHistory(['home'])
     setPage('home')
     window.location.hash = 'home'
@@ -195,16 +249,14 @@ export default function App() {
       case 'saved':
       case 'unlocked-contacts':
         return <TenantDashboard user={user} setPage={navigateTo} />
+      case 'my-id':
+        return <MyIdPage user={user} setPage={navigateTo} />
       case 'terms':
         return <TermsPage setPage={navigateTo} />
       case 'profile':
         return <ProfilePage user={user} setPage={navigateTo} logout={logout} />
       case 'logistics':
         return <LogisticsPage user={user} setPage={navigateTo} />
-      case 'unlock-help':
-        return <UnlockHelpPage user={user} setPage={navigateTo} />
-      case 'admin':
-        return <AdminPage user={user} setPage={navigateTo} />
       case 'email-confirmed':
         return <EmailConfirmedPage user={user} status={LINK_STATUS} setPage={navigateTo} />
       case 'reset-password':
@@ -246,6 +298,14 @@ export default function App() {
       )}
       {renderPage()}
 
+      {offer && (
+        <OfferPopup
+          context={offer}
+          onSkip={() => closeOffer(true)}
+          onGetId={() => { closeOffer(false); navigateTo('my-id') }}
+        />
+      )}
+
       {payNotice && (
         <div style={{
           position: "fixed", left: 12, right: 12, bottom: 78, zIndex: 1100,
@@ -257,7 +317,7 @@ export default function App() {
           <span>{payNotice}</span>
           <span style={{ display: "flex", gap: 8, flexShrink: 0 }}>
             <button
-              onClick={() => { setPayNotice(""); navigateTo('saved') }}
+              onClick={() => { setPayNotice(""); navigateTo('my-id') }}
               style={{ background: "#fff", color: "#0d1b5e", border: "none", borderRadius: 8, padding: "7px 12px", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
             >
               View
