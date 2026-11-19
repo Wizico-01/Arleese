@@ -5,10 +5,9 @@ export default function BottomNav({ page, setPage, user }) {
     user?.role === 'landlord'
       ? [
           { id: 'home', label: 'Home', icon: I.home },
-          { id: 'browse', label: 'Browse', icon: I.search },
-          { id: 'saved', label: 'Unlocked', icon: I.star },
-          { id: 'my-id', label: 'My ID', icon: I.key },
           { id: 'dashboard', label: 'Dashboard', icon: I.building },
+          { id: 'find-apartment', label: 'Apt Code', icon: I.shield },
+          { id: 'saved', label: 'Unlocked', icon: I.star },
           { id: 'profile', label: 'Profile', icon: I.user },
         ]
       : user?.role === 'logistics'
