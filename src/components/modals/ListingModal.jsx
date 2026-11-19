@@ -94,6 +94,20 @@ export default function ListingModal({ listing: l, onClose, user, setPage }) {
               <span><strong>Price:</strong> ₦{l.price?.toLocaleString()}{isSale ? "" : "/year"}</span>
             </div>
           </div>
+                      {contact.apt_code && (
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: "0.92rem", color: "#1e293b" }}>
+                <KeyRound size={16} strokeWidth={1.8} color="#0d1b5e" style={{ marginTop: 2, flexShrink: 0 }} />
+                <span>
+                  <strong>Apartment code:</strong>{" "}
+                  <span style={{ fontFamily: "'Courier New', monospace", fontWeight: 700, letterSpacing: "0.08em" }}>
+                    {contact.apt_code}
+                  </span>
+                  <span style={{ display: "block", fontSize: "0.76rem", color: "#6b7280", marginTop: 2 }}>
+                    Show this code to the Home Guide before your inspection.
+                  </span>
+                </span>
+              </div>
+            )}
 
           <div style={{
             display: "flex", gap: 10, alignItems: "center", justifyContent: "space-between",
