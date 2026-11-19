@@ -71,43 +71,54 @@ export default function MyIdPage({ user, setPage }) {
 
   useEffect(() => { load() /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [user?.id])
 
-  const verifyPayment = async (reference, silent = false) => {
-    if (!reference || busy.current) return false
-    busy.current = true
-    if (!silent) setVerifying(true)
+  
+const verifyPayment = async (reference, silent = false) => {
+  if (!reference || busy.current) return false
+  busy.current = true
+  if (!silent) setVerifying(true)
 
-    let result = { status: 'error' }
-    try {
-      const { data, error } = await supabase.functions.invoke('verify-payment', { body: { reference } })
-      if (error) result = { status: 'error', message: error.message }
-      else if (data?.status) result = data
-    } catch (e) {
-      result = { status: 'error', message: String(e) }
-    }
-    busy.current = false
-    setVerifying(false)
+  let result = { status: 'error' }
+  try {
+    const { data, error } = await supabase.functions.invoke('verify-payment', { body: { reference } })
+    if (error) result = { status: 'error', message: error.message }
+    else if (data?.status) result = data
+  } catch (e) {
+    result = { status: 'error', message: String(e) }
+  }
+  busy.current = false
+  setVerifying(false)
 
-    if (result.status === 'fulfilled') {
-      setNotice(null)
-      await load()
-      return true
-    }
-    if (!silent) {
-      const s = result.status
-      setNotice({
-        type: s === 'pending' ? 'info' : 'error',
-        message:
-          s === 'pending' ? 'We have not received your payment yet. Bank transfers can take a minute or two.'
-          : s === 'failed' ? 'Paystack reports this payment as failed.'
-          : s === 'amount_mismatch' ? 'The amount received is less than required. Please contact support.'
-          : s === 'credit_unavailable' ? 'Your credit changed while paying. Please contact support. Your payment is safe.'
-          : s === 'paystack_error' || s === 'config_error' ? 'Payment confirmation is not set up correctly yet. Your payment is safe. Please contact support.'
-          : 'Could not check right now. Please try again in a moment.',
-      })
-    }
-    return false
+  if (result.status === 'fulfilled') {
+    setNotice(null)
+    await load()
+    return true
   }
 
+  if (!silent) {
+    const s = result.status
+    const why = [
+      result.key_type && `key: ${result.key_type}`,
+      result.http && `paystack http ${result.http}`,
+      result.paystack_status && `paystack says: ${result.paystack_status}`,
+      result.message,
+    ].filter(Boolean).join(' | ')
+
+    const base =
+      s === 'pending' ? 'We have not received your payment yet. Bank transfers can take a minute or two.'
+      : s === 'failed' ? 'Paystack reports this payment as failed.'
+      : s === 'amount_mismatch' ? 'The amount received is less than required. Please contact support.'
+      : s === 'credit_unavailable' ? 'Your credit changed while paying. Please contact support. Your payment is safe.'
+      : s === 'unknown_reference' ? 'We could not match this payment to your account. Please contact support.'
+      : s === 'paystack_error' || s === 'config_error' ? 'Payment confirmation is not set up correctly yet. Your payment is safe. Please contact support.'
+      : 'Could not check right now. Please try again in a moment.'
+
+    setNotice({
+      type: s === 'pending' ? 'info' : 'error',
+      message: why ? `${base} [${why}]` : base,
+    })
+  }
+  return false
+}
   // While a payment is waiting, re-check every 6 seconds and when the app returns
   useEffect(() => {
     if (!pending) return
