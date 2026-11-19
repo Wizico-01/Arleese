@@ -181,7 +181,6 @@ export default function TenantDashboard({ user, setPage }) {
                     <MapPin size={13} /> {l.area}, {l.state}
                   </p>
                 )}
-
 {r.apt_code && (
   <div style={{
     background: "#0d1b5e", color: "#fff", borderRadius: 12,
@@ -196,7 +195,12 @@ export default function TenantDashboard({ user, setPage }) {
         {r.apt_code}
       </div>
     </div>
-    <div style={{ fontSize: "
+    <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,.72)", maxWidth: 130, lineHeight: 1.5, textAlign: "right" }}>
+      Show this to your Home Guide before the inspection.
+    </div>
+  </div>
+)}
+      
                 
                 <div style={{ background: "#f0f7ff", border: "1px solid #c7d4fd", borderRadius: 12, padding: "14px 16px", marginBottom: 12 }}>
                   <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#1e3db5", letterSpacing: "0.08em", marginBottom: 12 }}>
