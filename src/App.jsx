@@ -39,7 +39,7 @@ export default function App() {
     const validPages = [
       'home', 'browse', 'login', 'register', 'register-landlord',
       'dashboard', 'profile', 'terms', 'saved', 'unlocked-contacts',
-      'my-id', 'logistics', 'reset-password',
+      'my-id', 'logistics', 'find-apartment', 'reset-password',
     ]
     return validPages.includes(hash) ? hash : 'home'
   })
@@ -59,7 +59,7 @@ export default function App() {
 
   // Shows the Arleece ID offer: once per session per trigger, never to people who already have an ID
   const maybeOffer = async (uid, role, context) => {
-    if (!uid || role === 'logistics') return
+    if (!uid || role === 'logistics' || role === 'landlord') return
     const key = `arl_offer_${context}`
     try {
       if (sessionStorage.getItem(key)) return
@@ -263,6 +263,8 @@ export default function App() {
         return <EmailConfirmedPage user={user} status={LINK_STATUS} setPage={navigateTo} />
       case 'reset-password':
         return <ResetPasswordPage setPage={navigateTo} />
+      case 'find-apartment':
+  return <GuideFindPage user={user} setPage={navigateTo} />
       default:
         return <HomePage setPage={navigateTo} user={user} />
     }
