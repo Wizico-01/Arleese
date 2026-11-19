@@ -182,6 +182,22 @@ export default function TenantDashboard({ user, setPage }) {
                   </p>
                 )}
 
+{r.apt_code && (
+  <div style={{
+    background: "#0d1b5e", color: "#fff", borderRadius: 12,
+    padding: "12px 16px", marginBottom: 12,
+    display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
+  }}>
+    <div>
+      <div style={{ fontSize: "0.64rem", fontWeight: 700, letterSpacing: "0.1em", color: "#9db7ff", marginBottom: 4 }}>
+        APARTMENT CODE
+      </div>
+      <div style={{ fontFamily: "'Courier New', monospace", fontSize: "1.25rem", fontWeight: 700, letterSpacing: "0.1em" }}>
+        {r.apt_code}
+      </div>
+    </div>
+    <div style={{ fontSize: "
+                
                 <div style={{ background: "#f0f7ff", border: "1px solid #c7d4fd", borderRadius: 12, padding: "14px 16px", marginBottom: 12 }}>
                   <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#1e3db5", letterSpacing: "0.08em", marginBottom: 12 }}>
                     VERIFIED HOME GUIDE CONTACT
