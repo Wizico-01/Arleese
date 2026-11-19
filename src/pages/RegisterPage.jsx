@@ -236,7 +236,7 @@ export default function RegisterPage({ setPage, setUser, defaultRole }) {
             }}>
               {[
                 { r: "tenant", e: "🔍", t: "Tenant", d: "Looking for an apartment to rent" },
-                { r: "landlord", e: "🏠", t: "Landlord", d: "I have apartments to list and rent out" },
+                { r: "landlord", e: "🏠", t: "Home Guide", d: "I show available apartments to tenants" },
                 { r: "estate_developer", e: "🏢", t: "Estate Developer", d: "I manage multi-unit estates, layouts, or developments" },
               ].map(({ r, e, t, d }) => (
                 <div
