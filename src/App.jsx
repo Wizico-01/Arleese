@@ -16,6 +16,8 @@ import EmailConfirmedPage from './pages/EmailConfirmedPage'
 import MyIdPage from './pages/MyIdPage'
 import OfferPopup from './components/OfferPopup'
 import OnboardingSlider from './components/OnboardingSlider'
+import GuideFindPage from './pages/GuideFindPage'
+
 
 // Read the link type BEFORE Supabase clears the URL hash
 const LANDING_HASH = window.location.hash
