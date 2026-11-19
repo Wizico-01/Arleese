@@ -4,7 +4,7 @@ import { Ic, I } from '../Icons'
 import { Btn, Badge } from '../UI'
 import {
   Phone, MapPin, Tag, User, CheckCircle2,
-  AlertTriangle, Info, Unlock, BadgePercent,
+  AlertTriangle, Info, Unlock, BadgePercent, KeyRound,
 } from 'lucide-react'
 
 export default function ListingModal({ listing: l, onClose, user, setPage }) {
