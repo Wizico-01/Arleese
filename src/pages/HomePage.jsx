@@ -229,6 +229,54 @@ export default function HomePage({ setPage, user }) {
         </div>
       </section>
 
+      {/* YOUR HOME GUIDE */}
+      <section style={{ padding: "0 20px 64px", background: "#f4f3ef" }}>
+        <div style={{ maxWidth: 900, margin: "0 auto" }}>
+          <div style={{
+            background: "#fff", border: "1px solid #e8e8e0",
+            borderRadius: 18, padding: "30px 24px",
+          }}>
+            <h2 style={{
+              fontFamily: "'DM Serif Display',serif", color: "#0d1b5e",
+              fontSize: "1.7rem", marginBottom: 10, textAlign: "center",
+            }}>
+              A Home Guide by your side
+            </h2>
+            <p style={{
+              color: "#6b7280", fontSize: "0.9rem", lineHeight: 1.75,
+              textAlign: "center", maxWidth: 560, margin: "0 auto 26px",
+            }}>
+              Every apartment on Arleece comes with a verified Home Guide who takes you through the viewing and answers your questions.
+            </p>
+
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))",
+              gap: 16,
+            }}>
+              {[
+                { icon: <UserCheck size={22} strokeWidth={1.7} color="#0d1b5e" />, t: "Verified guides", d: "Arleece checks every Home Guide before they can list." },
+                { icon: <MapPin size={22} strokeWidth={1.7} color="#0d1b5e" />, t: "Guided viewings", d: "Your Home Guide takes you to see the apartments you unlock." },
+                { icon: <KeyRound size={22} strokeWidth={1.7} color="#0d1b5e" />, t: "Your apartment code", d: "Show your code and your guide takes you to that exact apartment." },
+              ].map(b => (
+                <div key={b.t} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                  <div style={{
+                    width: 42, height: 42, borderRadius: 10, background: "#eef2ff",
+                    display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                  }}>
+                    {b.icon}
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 700, color: "#0d1b5e", fontSize: "0.92rem", marginBottom: 3 }}>{b.t}</div>
+                    <div style={{ color: "#6b7280", fontSize: "0.8rem", lineHeight: 1.6 }}>{b.d}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+      
       {/* LATEST APARTMENTS */}
       {showListings && (
         <section style={{ padding: "0 20px 64px", background: "#f4f3ef" }}>
