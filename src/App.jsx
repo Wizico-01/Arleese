@@ -17,6 +17,9 @@ import MyIdPage from './pages/MyIdPage'
 import OfferPopup from './components/OfferPopup'
 import OnboardingSlider from './components/OnboardingSlider'
 import GuideFindPage from './pages/GuideFindPage'
+import AdminGuidesPage from './pages/AdminGuidesPage'
+import AdminGrowthPage from './pages/AdminGrowthPage'
+import WhatsAppButton from './components/WhatsAppButton'
 
 
 // Read the link type BEFORE Supabase clears the URL hash
@@ -39,7 +42,7 @@ export default function App() {
     const validPages = [
       'home', 'browse', 'login', 'register', 'register-landlord',
       'dashboard', 'profile', 'terms', 'saved', 'unlocked-contacts',
-      'my-id', 'logistics', 'find-apartment', 'reset-password',
+      'my-id', 'logistics', 'find-apartment', 'reset-password', 'admin-guides', 'admin-growth',
     ]
     return validPages.includes(hash) ? hash : 'home'
   })
@@ -265,6 +268,10 @@ export default function App() {
         return <ResetPasswordPage setPage={navigateTo} />
       case 'find-apartment':
   return <GuideFindPage user={user} setPage={navigateTo} />
+        case 'admin-guides':
+  return <AdminGuidesPage user={user} setPage={navigateTo} />
+case 'admin-growth':
+  return <AdminGrowthPage user={user} setPage={navigateTo} />
       default:
         return <HomePage setPage={navigateTo} user={user} />
     }
