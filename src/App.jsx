@@ -192,6 +192,17 @@ export default function App() {
   }, [user?.id])
 
   useEffect(() => {
+    try {
+      let v = localStorage.getItem('arl_visitor')
+      if (!v) {
+        v = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2) + Date.now())
+        localStorage.setItem('arl_visitor', v)
+      }
+      supabase.rpc('track_visit', { p_visitor: v })
+    } catch { /* ignore */ }
+  }, [])
+
+  useEffect(() => {
     const handlePop = () => {
       setPageHistory(prev => {
         if (prev.length > 1) {
@@ -308,6 +319,19 @@ case 'admin-growth':
         />
       )}
       {renderPage()}
+
+      <WhatsAppButton />
+
+      {user?.isAdmin && (
+        <div style={{ position: 'fixed', right: 12, bottom: 78, zIndex: 1000, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {[['admin-guides', 'Verify guides'], ['admin-growth', 'Growth']].map(([id, l]) => (
+            <button key={id} onClick={() => navigateTo(id)}
+              style={{ background: '#0d1b5e', color: '#fff', border: 'none', borderRadius: 20, padding: '9px 16px', fontSize: '0.76rem', fontWeight: 700, fontFamily: 'inherit', boxShadow: '0 4px 14px rgba(0,0,0,.25)' }}>
+              {l}
+            </button>
+          ))}
+        </div>
+      )}
 
       {offer && (
         <OfferPopup
