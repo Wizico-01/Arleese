@@ -103,7 +103,7 @@ export default function TermsPage({ setPage }) {
           </P>
           <P>
             <strong>Your rights.</strong> You can ask to see, correct or delete your data. Contact us
-            through the support options in the app or at [ADD YOUR SUPPORT EMAIL].
+            through the WhatsApp button or send us a mail with arleece1@gmail.com.
           </P>
         </Section>
 
