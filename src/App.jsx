@@ -192,15 +192,14 @@ export default function App() {
   }, [user?.id])
 
   useEffect(() => {
-    try {
-      let v = localStorage.getItem('arl_visitor')
-      if (!v) {
-        v = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2) + Date.now())
-        localStorage.setItem('arl_visitor', v)
-      }
-      supabase.rpc('track_visit', { p_visitor: v })
-    } catch { /* ignore */ }
-  }, [])
+  let v = null
+  try { v = localStorage.getItem('arl_visitor') } catch { /* ignore */ }
+  if (!v) {
+    v = crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2) + String(Date.now())
+    try { localStorage.setItem('arl_visitor', v) } catch { /* ignore */ }
+  }
+  supabase.rpc('track_visit', { p_visitor: v }).then(() => {}, () => {})
+}, [])
 
   useEffect(() => {
     const handlePop = () => {
