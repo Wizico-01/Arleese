@@ -51,7 +51,7 @@ export default function App() {
   const [payNotice, setPayNotice] = useState("")
   const [offer, setOffer] = useState(null) // null | 'login' | 'unlock'
 
-  const userRef = useRef(null)
+  const userRef = useRef(null) const offeredFor = useRef(null)
   const pageRef = useRef(page)
   userRef.current = user
   pageRef.current = page
@@ -62,29 +62,39 @@ export default function App() {
 
   // Shows the Arleece ID offer: once per session per trigger, never to people who already have an ID
   const maybeOffer = async (uid, role, context) => {
-    if (!uid || role === 'logistics' || role === 'landlord') return
-    const key = `arl_offer_${context}`
-    try {
-      if (sessionStorage.getItem(key)) return
-      if (context === 'login') {
-        const last = Number(localStorage.getItem('arl_offer_skipped_at') || 0)
-        if (Date.now() - last < 24 * 3600 * 1000) return
-      }
-    } catch { /* storage blocked: continue */ }
+  if (!uid || role === 'logistics' || role === 'landlord') return
 
-    const { data } = await supabase
-      .from('arleece_ids')
-      .select('id')
-      .eq('user_id', uid)
-      .in('status', ['active', 'used'])
-      .limit(1)
-    if (data && data.length) return
+  if (context === 'login') {
+    // once per login or app open; tab-switching does not repeat it
+    if (offeredFor.current === uid) return
+    offeredFor.current = uid
+  } else {
+    try { if (sessionStorage.getItem('arl_offer_unlock')) return } catch { /* ignore */ }
+  }
 
-    setTimeout(() => {
-      if (NO_OFFER_PAGES.includes(pageRef.current)) return
-      try { sessionStorage.setItem(key, '1') } catch { /* ignore */ }
-      setOffer(context)
-    }, context === 'login' ? 1500 : 400)
+  // skip only people who already hold an active Arleece ID
+  const { data } = await supabase
+    .from('arleece_ids')
+    .select('id')
+    .eq('user_id', uid)
+    .eq('status', 'active')
+    .gt('expires_at', new Date().toISOString())
+    .limit(1)
+  if (data && data.length) return
+
+  let tries = 0
+  const attempt = () => {
+    if (userRef.current?.id !== uid) return
+    if (NO_OFFER_PAGES.includes(pageRef.current)) {
+      if (tries++ < 10) setTimeout(attempt, 700)
+      return
+    }
+    if (context === 'unlock') {
+      try { sessionStorage.setItem('arl_offer_unlock', '1') } catch { /* ignore */ }
+    }
+    setOffer(context)
+  }
+  setTimeout(attempt, context === 'login' ? 1200 : 400)
   }
 
   const loadProfile = (session) => {
@@ -131,8 +141,9 @@ export default function App() {
         loadProfile(session)
       }
       if (event === 'SIGNED_OUT') {
-        setUser(null)
-      }
+  offeredFor.current = null
+  setUser(null)
+}
     })
 
     return () => subscription.unsubscribe()
@@ -239,10 +250,8 @@ export default function App() {
     setUser(null)
     setPayNotice("")
     setOffer(null)
-    try {
-      sessionStorage.removeItem('arl_offer_login')
-      sessionStorage.removeItem('arl_offer_unlock')
-    } catch { /* ignore */ }
+    offeredFor.current = null
+try { sessionStorage.removeItem('arl_offer_unlock') } catch { /* ignore */ } catch { /* ignore */ }
     setPageHistory(['home'])
     setPage('home')
     window.location.hash = 'home'
